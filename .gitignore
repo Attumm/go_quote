@@ -1,0 +1,15 @@
+go_quote
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+.idea/
+
+data/*
+
+*.cover
+
+*.log
+
+.env
