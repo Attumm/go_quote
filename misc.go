@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
 func PrintMemUsage() {
@@ -39,16 +38,75 @@ func getConvertedFilename(originalFilename, convertStorage, outputDir string) st
 }
 
 func getID(path string) (int, error) {
-	if strings.Contains(path, "/quote/") {
-		parts := strings.Split(path, "/quote/")
-		if len(parts) != 2 {
-			return -1, fmt.Errorf("invalid path format")
-		}
-		id, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return -1, err
-		}
-		return id, nil
+	if len(path) == 0 {
+		return -1, nil
 	}
-	return -1, nil
+
+	end := len(path)
+	if path[end-1] == '/' {
+		end--
+	}
+
+	start := end - 1
+	for ; start >= 0; start-- {
+		if path[start] == '/' {
+			start++
+			break
+		}
+	}
+
+	if start < 0 {
+		start = 0
+	}
+
+	idStr := path[start:end]
+	if idStr == "" {
+		return -1, nil
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return -1, fmt.Errorf("invalid ID format: %v", err)
+	}
+
+	if id < 0 {
+		return -1, fmt.Errorf("negative IDs are not allowed")
+	}
+
+	return id, nil
+}
+
+type Pagination struct {
+	Page     int    `json:"page"`
+	PageSize int    `json:"page_size"`
+	Total    int    `json:"total"`
+	Pages    int    `json:"pages"`
+	Next     string `json:"next,omitempty"`
+}
+
+func (api *API) paginate(total int, page int, pageSize int) Pagination {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = api.DefaultPageSize
+	}
+	if pageSize > api.MaxPageSize {
+		pageSize = api.MaxPageSize
+	}
+
+	pages := (total + pageSize - 1) / pageSize
+
+	pagination := Pagination{
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
+		Pages:    pages,
+	}
+
+	if page < pages {
+		pagination.Next = fmt.Sprintf("?page=%d&%s=%d", page+1, PAGESIZE, pageSize)
+	}
+
+	return pagination
 }

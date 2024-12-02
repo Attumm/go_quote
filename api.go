@@ -2,22 +2,233 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 type API struct {
-	Quotes Quotes
+	Quotes          Quotes
+	Authors         IndexStructure
+	Tags            IndexStructure
+	DefaultPageSize int
+	MaxPageSize     int
 }
 
-func (api *API) SetupRoutes() {
+const PAGESIZE = "page_size"
 
+func (api *API) SetupRoutes() {
 	http.HandleFunc("/docs/", api.HandleFormatDocs)
-	http.HandleFunc("/", api.QuoteHandler)
+
+	http.HandleFunc("/tags", api.ListTagsHandler)
+	http.HandleFunc("/tags/", api.TagQuotesHandler)
+
+	http.HandleFunc("/authors", api.ListAuthorsHandler)
+	http.HandleFunc("/authors/", api.AuthorQuotesHandler)
+
+	http.HandleFunc("/quotes/", api.ListQuotesHandler)
 	http.HandleFunc("/random-quote", api.QuoteHandler)
+	http.HandleFunc("/quote/", api.QuoteHandler)
+	http.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
+		PrintMemUsage()
+		fmt.Fprintf(w, "Debug information printed to console")
+	})
+	http.HandleFunc("/", api.QuoteHandler)
+}
+
+func (api *API) TagQuotesHandler(w http.ResponseWriter, r *http.Request) {
+	tagName := r.URL.Path[len("/tags/"):]
+
+	quoteIDs, exists := api.Tags.nameToIDs[tagName]
+	if !exists {
+		http.Error(w, "Tag not found", http.StatusNotFound)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+
+	pagination := api.paginate(len(quoteIDs), page, pageSize)
+
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	if endIndex > len(quoteIDs) {
+		endIndex = len(quoteIDs)
+	}
+
+	quotes := make([]ResponseQuote, 0, endIndex-startIndex)
+	for _, id := range quoteIDs[startIndex:endIndex] {
+		quotes = append(quotes, api.Quotes[id].CreateResponseQuote(id))
+	}
+
+	response := struct {
+		Quotes     []ResponseQuote `json:"quotes"`
+		Pagination Pagination      `json:"pagination"`
+	}{
+		Quotes:     quotes,
+		Pagination: pagination,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+
+	pagination := api.paginate(len(api.Tags.names), page, pageSize)
+
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	if endIndex > len(api.Tags.names) {
+		endIndex = len(api.Tags.names)
+	}
+
+	type TagResponse struct {
+		Name        string `json:"name"`
+		TagID       string `json:"tag-id"`
+		TotalQuotes int    `json:"total-quotes"`
+	}
+
+	tags := make([]TagResponse, 0, endIndex-startIndex)
+	for i := startIndex; i < endIndex; i++ {
+		tags = append(tags, TagResponse{
+			Name:        api.Tags.names[i],
+			TagID:       api.Tags.names[i],
+			TotalQuotes: len(api.Tags.nameToIDs[api.Tags.names[i]]),
+		})
+	}
+
+	response := struct {
+		Tags       []TagResponse `json:"tags"`
+		Pagination Pagination    `json:"pagination"`
+	}{
+		Tags:       tags,
+		Pagination: pagination,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) ListAuthorsHandler(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+
+	pagination := api.paginate(len(api.Authors.names), page, pageSize)
+
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	if endIndex > len(api.Authors.names) {
+		endIndex = len(api.Authors.names)
+	}
+
+	type AuthorResponse struct {
+		Name        string `json:"name"`
+		AuthorID    string `json:"author-id"`
+		TotalQuotes int    `json:"total-quotes"`
+	}
+
+	authors := make([]AuthorResponse, 0, endIndex-startIndex)
+	for i := startIndex; i < endIndex; i++ {
+		encodedName := api.Authors.names[i]
+		decodedName, _ := url.QueryUnescape(encodedName)
+		authors = append(authors, AuthorResponse{
+			Name:        decodedName,
+			AuthorID:    encodedName,
+			TotalQuotes: len(api.Authors.nameToIDs[encodedName]),
+		})
+	}
+
+	response := struct {
+		Authors    []AuthorResponse `json:"authors"`
+		Pagination Pagination       `json:"pagination"`
+	}{
+		Authors:    authors,
+		Pagination: pagination,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
+	authorID := r.URL.Path[len("/authors/"):]
+
+	quoteIDs, exists := api.Authors.nameToIDs[authorID]
+	if !exists {
+		http.Error(w, "Author not found", http.StatusNotFound)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+
+	pagination := api.paginate(len(quoteIDs), page, pageSize)
+
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	if endIndex > len(quoteIDs) {
+		endIndex = len(quoteIDs)
+	}
+
+	quotes := make([]ResponseQuote, 0, endIndex-startIndex)
+	for _, id := range quoteIDs[startIndex:endIndex] {
+		quotes = append(quotes, api.Quotes[id].CreateResponseQuote(id))
+	}
+
+	authorName, _ := url.QueryUnescape(authorID)
+
+	response := struct {
+		Author      string          `json:"author"`
+		AuthorID    string          `json:"author-id"`
+		TotalQuotes int             `json:"total-quotes"`
+		Quotes      []ResponseQuote `json:"quotes"`
+		Pagination  Pagination      `json:"pagination"`
+	}{
+		Author:      authorName,
+		AuthorID:    authorID,
+		TotalQuotes: len(api.Authors.nameToIDs[authorID]),
+		Quotes:      quotes,
+		Pagination:  pagination,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+
+	pagination := api.paginate(len(api.Quotes), page, pageSize)
+
+	startIndex := (pagination.Page - 1) * pagination.PageSize
+	endIndex := startIndex + pagination.PageSize
+	if endIndex > len(api.Quotes) {
+		endIndex = len(api.Quotes)
+	}
+
+	response := struct {
+		Quotes     []ResponseQuote `json:"quotes"`
+		Pagination Pagination      `json:"pagination"`
+	}{
+		Pagination: pagination,
+	}
+
+	for i := startIndex; i < endIndex; i++ {
+		response.Quotes = append(response.Quotes, api.Quotes[i].CreateResponseQuote(i))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,14 +238,14 @@ func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	quoteID := rand.Intn(len(api.Quotes))
-	if strings.Contains(r.URL.Path, "/quote/") {
-		quoteID, err := getID(r.URL.Path)
+	var err error
+	if strings.Contains(r.URL.Path, "quote") {
+		quoteID, err = getID(r.URL.Path)
 		if err != nil || quoteID < 0 || quoteID >= len(api.Quotes) {
 			http.Error(w, "Quote not found", http.StatusNotFound)
 			return
 		}
 	}
-
 	quote := api.Quotes[quoteID].CreateResponseQuote(quoteID)
 
 	responseInfo := getResponseInfo(r, quoteID)
@@ -279,5 +490,5 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 }
 
 func (w *responseWriter) WriteHeader(statusCode int) {
-	// No-op for our purposes
+	// No-op
 }

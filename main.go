@@ -9,24 +9,28 @@ import (
 )
 
 type Config struct {
-	Filename       string `settingo:"Path of the filename"`
-	Storage        string `settingo:"Storage type"`
-	Convert        bool   `settingo:"Convert mode, will convert data into Convert Storage type"`
-	ConvertStorage string `settingo:"Storage type to convert to"`
-	OutputDir      string `settingo:"Directory to store converted files"`
-	Port           string `settingo:"Port for the API server"`
-	Host           string `settingo:"Host for the API server"`
+	Filename        string `settingo:"Path of the filename"`
+	Storage         string `settingo:"Storage type"`
+	Convert         bool   `settingo:"Convert mode, will convert data into Convert Storage type"`
+	ConvertStorage  string `settingo:"Storage type to convert to"`
+	OutputDir       string `settingo:"Directory to store converted files"`
+	Port            string `settingo:"Port for the API server"`
+	Host            string `settingo:"Host for the API server"`
+	DefaultPageSize int    `settingo:"Page size to use for the API server"`
+	MaxPageSize     int    `settingo:"Maximum quotes for the API server"`
 }
 
 func main() {
 	config := &Config{
-		Filename:       "data/quotes.csv",
-		Storage:        "csv",
-		Convert:        false,
-		ConvertStorage: "bytesz",
-		OutputDir:      "data",
-		Port:           "8000",
-		Host:           "0.0.0.0",
+		Filename:        "data/quotes.csv",
+		Storage:         "csv",
+		Convert:         false,
+		ConvertStorage:  "bytesz",
+		OutputDir:       "data",
+		Port:            "8000",
+		Host:            "0.0.0.0",
+		DefaultPageSize: 10,
+		MaxPageSize:     10000,
 	}
 
 	settingo.ParseTo(config)
@@ -57,9 +61,17 @@ func main() {
 	fmt.Printf("Total quotes processed: %d\n", len(quotes))
 	PrintMemUsage()
 
+	authorIndex := BuildAuthorIndex(quotes)
+	tagIndex := BuildTagIndex(quotes)
+
 	api := &API{
-		Quotes: quotes,
+		Quotes:          quotes,
+		Authors:         authorIndex,
+		Tags:            tagIndex,
+		DefaultPageSize: config.DefaultPageSize,
+		MaxPageSize:     config.MaxPageSize,
 	}
+
 	api.SetupRoutes()
 
 	fmt.Printf("Starting server on port %s...\n", config.Port)

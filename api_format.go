@@ -154,7 +154,8 @@ func getOutputFormat(r *http.Request) string {
 func quoteToHTML(quote ResponseQuote) string {
 	tagHTML := ""
 	for _, tag := range quote.Tags {
-		tagHTML += fmt.Sprintf(`<span class="tag">%s</span>`, tag)
+		encodedTag := url.QueryEscape(tag)
+		tagHTML += fmt.Sprintf(`<a href="/tags/%s" class="tag">%s</a>`, encodedTag, tag)
 	}
 
 	return fmt.Sprintf(`
@@ -206,6 +207,11 @@ func quoteToHTML(quote ResponseQuote) string {
             font-size: 14px;
             margin-right: 5px;
             margin-bottom: 5px;
+            text-decoration: none;
+        }
+        .tag:hover {
+            background-color: #e1e8ed;
+            color: #1da1f2;
         }
         .footer {
             display: flex;
@@ -249,23 +255,23 @@ func quoteToMarkdown(quote ResponseQuote) string {
 	return fmt.Sprintf("> %s\n\n— %s\n\nQuote ID: %d\n\n%s", quote.Text, quote.Author, quote.ID, tags)
 }
 
-func quoteToRSS(quote ResponseQuote) string {
+func quoteToRSS(quote ResponseQuote, quoteUrl string) string {
 	pubDate := time.Now().Format(time.RFC1123Z)
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
 <channel>
   <title>Random Quote</title>
-  <link>http://example.com/quotes/%d</link>
+  <link>/quotes/%s</link>
   <description>Random Quote of the Moment</description>
   <item>
     <title>Quote by %s</title>
     <description>%s</description>
     <author>%s</author>
     <pubDate>%s</pubDate>
-    <guid>http://example.com/quotes/%d</guid>
+    <guid>%v</guid>
   </item>
 </channel>
-</rss>`, quote.ID, quote.Author, quote.Text, quote.Author, pubDate, quote.ID)
+</rss>`, quoteUrl, quote.Author, quote.Text, quote.Author, pubDate, quoteUrl)
 }
 
 func quoteToYAML(quote ResponseQuote) string {
@@ -313,10 +319,10 @@ func (api *API) formatResponse(w http.ResponseWriter, quote ResponseQuote, respo
 	case "xml":
 		w.Header().Set("Content-Type", "application/xml")
 		xmlQuote := XMLQuote{
-			ID:     quote.ID,
 			Text:   quote.Text,
 			Author: quote.Author,
 			Tags:   quote.Tags,
+			ID:     quote.ID,
 		}
 		xml.NewEncoder(w).Encode(xmlQuote)
 
@@ -326,8 +332,8 @@ func (api *API) formatResponse(w http.ResponseWriter, quote ResponseQuote, respo
 
 	case "text":
 		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "ID: %d\nQuote: %s\nAuthor: %s\nTags: %v\n",
-			quote.ID, quote.Text, quote.Author, strings.Join(quote.Tags, ", "))
+		fmt.Fprintf(w, "Quote: %s\nAuthor: %s\nTags: %v\nID: %d\n",
+			quote.Text, quote.Author, strings.Join(quote.Tags, ", "), quote.ID)
 
 	case "markdown":
 		w.Header().Set("Content-Type", "text/markdown")
@@ -343,7 +349,7 @@ func (api *API) formatResponse(w http.ResponseWriter, quote ResponseQuote, respo
 
 	case "rss":
 		w.Header().Set("Content-Type", "application/rss+xml")
-		fmt.Fprint(w, quoteToRSS(quote))
+		fmt.Fprint(w, quoteToRSS(quote, responseInfo.QuoteURL))
 
 	case "atom":
 		w.Header().Set("Content-Type", "application/atom+xml")
