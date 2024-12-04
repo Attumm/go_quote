@@ -1,6 +1,9 @@
 package main
 
-import "net/url"
+import (
+	"net/url"
+	"strings"
+)
 
 type Quote struct {
 	Text   string
@@ -15,38 +18,43 @@ type ResponseQuote struct {
 }
 
 func (q Quote) CreateResponseQuote(id int) ResponseQuote {
+	authorID := url.QueryEscape(q.Author)
 	return ResponseQuote{
 		Quote:    q,
 		ID:       id,
-		AuthorID: url.QueryEscape(q.Author),
+		AuthorID: authorID,
 	}
 }
 
 type Quotes []Quote
+type ResponseQuotes []ResponseQuote
 
 type IndexStructure struct {
-	names     []string
-	nameToIDs map[string][]int
+	Names        []string
+	NameToQuotes map[string][]int
 }
 
 func NewIndexStructure() IndexStructure {
 	return IndexStructure{
-		names:     make([]string, 0),
-		nameToIDs: make(map[string][]int),
+		Names:        make([]string, 0),
+		NameToQuotes: make(map[string][]int),
 	}
 }
-
-func (is *IndexStructure) add(name string, id int) {
-	if _, exists := is.nameToIDs[name]; !exists {
-		is.names = append(is.names, name)
+func (is *IndexStructure) Add(name string, id int) {
+	parsedName := strings.TrimSpace(name)
+	if len(parsedName) == 0 {
+		return
 	}
-	is.nameToIDs[name] = append(is.nameToIDs[name], id)
-}
 
+	if _, exists := is.NameToQuotes[parsedName]; !exists {
+		is.Names = append(is.Names, parsedName)
+	}
+	is.NameToQuotes[parsedName] = append(is.NameToQuotes[parsedName], id)
+}
 func BuildAuthorIndex(quotes Quotes) IndexStructure {
 	index := NewIndexStructure()
 	for i, quote := range quotes {
-		index.add(url.QueryEscape(quote.Author), i)
+		index.Add(url.QueryEscape(quote.Author), i)
 	}
 	return index
 }
@@ -55,7 +63,7 @@ func BuildTagIndex(quotes Quotes) IndexStructure {
 	index := NewIndexStructure()
 	for i, quote := range quotes {
 		for _, tag := range quote.Tags {
-			index.add(tag, i)
+			index.Add(tag, i)
 		}
 	}
 	return index

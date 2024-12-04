@@ -30,7 +30,7 @@ func main() {
 		Port:            "8000",
 		Host:            "0.0.0.0",
 		DefaultPageSize: 10,
-		MaxPageSize:     10000,
+		MaxPageSize:     1000000,
 	}
 
 	settingo.ParseTo(config)

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -150,18 +152,121 @@ func getOutputFormat(r *http.Request) string {
 
 	return format
 }
+func quotesToHTML(response struct {
+	Quotes     []ResponseQuote `json:"quotes"`
+	Pagination Pagination      `json:"pagination"`
+}, tagName string) string {
+	var htmlBuilder strings.Builder
 
-func quoteToHTML(quote ResponseQuote) string {
-	tagHTML := ""
-	for _, tag := range quote.Tags {
-		encodedTag := url.QueryEscape(tag)
-		tagHTML += fmt.Sprintf(`<a href="/tags/%s" class="tag">%s</a>`, encodedTag, tag)
+	htmlBuilder.WriteString(`
+    <div class="quotes-container">
+        <style>
+            .quotes-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .pagination {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 20px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            }
+            .pagination-info {
+                color: #657786;
+                font-size: 14px;
+            }
+            .pagination-link {
+                background-color: #f1f3f5;
+                color: #657786;
+                padding: 8px 12px;
+                border-radius: 4px;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .pagination-link:hover {
+                background-color: #e1e8ed;
+                color: #1da1f2;
+            }
+            .tag-header {
+                width: 100%;
+                background-color: #f1f3f5;
+                padding: 20px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+            }
+            .tag-header h1 {
+                margin: 0;
+                color: #14171a;
+                font-size: 24px;
+            }
+            .tag-header p {
+                margin: 10px 0 0;
+                color: #657786;
+            }
+        </style>
+    `)
+
+	if tagName != "" {
+		htmlBuilder.WriteString(fmt.Sprintf(`
+        <div class="tag-header">
+            <h1>Quotes tagged with "%s"</h1>
+            <p>Found %d quotes</p>
+        </div>
+        `, tagName, response.Pagination.Total))
 	}
+
+	for _, quote := range response.Quotes {
+		quoteHTML := quoteToHTML(quote, tagName)
+		htmlBuilder.WriteString(quoteHTML)
+	}
+
+	htmlBuilder.WriteString(`
+        <div class="pagination">
+            <span class="pagination-info">
+                Page ` + fmt.Sprintf("%d", response.Pagination.Page) + ` of ` + fmt.Sprintf("%d", response.Pagination.Pages) + `
+            </span>
+            <div>
+                <a href="?page=` + fmt.Sprintf("%d", response.Pagination.Page-1) + `" class="pagination-link">Previous</a>
+    `)
+
+	if response.Pagination.Next != "" {
+		htmlBuilder.WriteString(`<a href="` + response.Pagination.Next + `" class="pagination-link">Next</a>`)
+	}
+
+	htmlBuilder.WriteString(`
+            </div>
+        </div>
+    </div>`)
+
+	return htmlBuilder.String()
+}
+
+func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
+	var tagHTML strings.Builder
+	for _, tag := range quote.Tags {
+		cleanTag := strings.TrimSpace(tag)
+		encodedTag := url.QueryEscape(cleanTag)
+		tagClass := "tag"
+		if cleanTag == highlightedTag {
+			tagClass += " highlighted-tag"
+		}
+		tagHTML.WriteString(fmt.Sprintf(`<a href="/tags/%s" class="%s">%s</a>`, encodedTag, tagClass, cleanTag))
+	}
+
+	authorLink := fmt.Sprintf(`<a href="/authors/%s" class="author">— %s</a>`,
+		strings.TrimSpace(quote.AuthorID),
+		strings.TrimSpace(quote.Author))
 
 	return fmt.Sprintf(`
     <div class="quote-container">
         <p class="quote-text">%s</p>
-        <p class="author">— %s</p>
+        %s
         <div class="tags">%s</div>
         <div class="footer">
             <span class="quote-id">Quote ID: %d</span>
@@ -174,6 +279,16 @@ func quoteToHTML(quote ResponseQuote) string {
         </div>
     </div>
     <style>
+        html {
+            -webkit-text-size-adjust: 100%%;
+            -ms-text-size-adjust: 100%%;
+        }
+        body {
+            text-size-adjust: none;
+            -webkit-text-size-adjust: none;
+            -moz-text-size-adjust: none;
+            -ms-text-size-adjust: none;
+        }
         .quote-container {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
             max-width: 500px;
@@ -184,16 +299,23 @@ func quoteToHTML(quote ResponseQuote) string {
             border-radius: 4px;
         }
         .quote-text {
-            font-size: 18px;
+            font-size: 18px !important;
             line-height: 1.5;
             color: #333333;
             margin-bottom: 15px;
             font-style: italic;
+            max-width: 100%%;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
         .author {
-            font-size: 16px;
+            font-size: 16px !important;
             color: #657786;
             margin-bottom: 15px;
+            text-decoration: none;
+        }
+        .author:hover {
+            color: #1da1f2;
         }
         .tags {
             margin-bottom: 15px;
@@ -204,7 +326,7 @@ func quoteToHTML(quote ResponseQuote) string {
             color: #657786;
             padding: 4px 8px;
             border-radius: 16px;
-            font-size: 14px;
+            font-size: 14px !important;
             margin-right: 5px;
             margin-bottom: 5px;
             text-decoration: none;
@@ -213,6 +335,13 @@ func quoteToHTML(quote ResponseQuote) string {
             background-color: #e1e8ed;
             color: #1da1f2;
         }
+        .highlighted-tag {
+            background-color: #1da1f2 !important;
+            color: white !important;
+        }
+        .highlighted-tag:hover {
+            background-color: #1a91da !important;
+        }
         .footer {
             display: flex;
             justify-content: space-between;
@@ -220,7 +349,7 @@ func quoteToHTML(quote ResponseQuote) string {
         }
         .quote-id {
             color: #aab8c2;
-            font-size: 12px;
+            font-size: 12px !important;
         }
         .next-button {
             background-color: transparent;
@@ -235,8 +364,19 @@ func quoteToHTML(quote ResponseQuote) string {
         .next-button:hover {
             color: #1da1f2;
         }
+        @media screen and (max-width: 600px) {
+            .quote-text {
+                font-size: 16px !important;
+            }
+            .author {
+                font-size: 14px !important;
+            }
+            .tag {
+                font-size: 12px !important;
+            }
+        }
     </style>
-    `, quote.Text, quote.Author, tagHTML, quote.ID)
+    `, quote.Text, authorLink, tagHTML.String(), quote.ID)
 }
 
 type XMLQuote struct {
@@ -283,14 +423,48 @@ func quoteToYAML(quote ResponseQuote) string {
     - %s
 `, quote.ID, quote.Text, quote.Author, strings.Join(quote.Tags, "\n    - "))
 }
+func quotesToYAML(quotes []ResponseQuote) string {
+	var buf strings.Builder
+	buf.WriteString("quotes:\n")
+	for _, quote := range quotes {
+		buf.WriteString(fmt.Sprintf("  - id: %d\n", quote.ID))
+		buf.WriteString(fmt.Sprintf("    text: \"%s\"\n", strings.ReplaceAll(quote.Text, "\"", "\\\"")))
+		buf.WriteString(fmt.Sprintf("    author: \"%s\"\n", strings.ReplaceAll(quote.Author, "\"", "\\\"")))
+		buf.WriteString("    tags:\n")
+		for _, tag := range quote.Tags {
+			buf.WriteString(fmt.Sprintf("      - %s\n", tag))
+		}
+	}
+	return buf.String()
+}
 
 func quoteToCSV(quote ResponseQuote) string {
+	var sb strings.Builder
+	sb.WriteString(`"ID","Text","Author","Tags"`)
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf(`"%d","%s","%s","%s"`,
+		quote.ID,
+		strings.ReplaceAll(quote.Text, `"`, `""`),
+		strings.ReplaceAll(quote.Author, `"`, `""`),
+		strings.Join(quote.Tags, "|")))
+	return sb.String()
+}
 
-	text := strings.ReplaceAll(quote.Text, `"`, `""`)
-	author := strings.ReplaceAll(quote.Author, `"`, `""`)
-	tags := strings.Join(quote.Tags, "|")
-	return fmt.Sprintf(`"ID","Text","Author","Tags"
-"%d","%s","%s","%s"`, quote.ID, text, author, tags)
+func quotesToCSV(quotes ResponseQuotes) string {
+	var buf bytes.Buffer
+	buf.WriteString(`"ID","Text","Author","Tags"`)
+	buf.WriteString("\n")
+
+	for _, quote := range quotes {
+		buf.WriteString(fmt.Sprintf(`"%d","%s","%s","%s"`,
+			quote.ID,
+			strings.ReplaceAll(quote.Text, `"`, `""`),
+			strings.ReplaceAll(quote.Author, `"`, `""`),
+			strings.Join(quote.Tags, "|")))
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
 }
 
 type ResponseInfo struct {
@@ -310,7 +484,46 @@ func getResponseInfo(r *http.Request, quoteID int) ResponseInfo {
 	}
 }
 
-func (api *API) formatResponse(w http.ResponseWriter, quote ResponseQuote, responseInfo ResponseInfo) {
+func (api *API) formatResponseQuotes(w http.ResponseWriter, response PaginatedQuotes, format string) {
+	w.Header().Set("Current-Page", strconv.Itoa(response.Pagination.Page))
+	w.Header().Set("Page-Size", strconv.Itoa(response.Pagination.PageSize))
+	w.Header().Set("Total-Count", strconv.Itoa(response.Pagination.Total))
+	w.Header().Set("Total-Pages", strconv.Itoa(response.Pagination.Pages))
+	if response.Pagination.Next != "" {
+		w.Header().Set("Next-Page", response.Pagination.Next)
+	}
+
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	case "csv":
+		w.Header().Set("Content-Type", "text/csv")
+		fmt.Fprint(w, quotesToCSV(response.Quotes))
+	case "html":
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, quotesToHTML(response, ""))
+	case "text":
+		w.Header().Set("Content-Type", "text/plain")
+		for _, quote := range response.Quotes {
+			fmt.Fprintf(w, "Quote: %s\nAuthor: %s\nTags: %s\nID: %d\n\n",
+				quote.Text, quote.Author, strings.Join(quote.Tags, ", "), quote.ID)
+		}
+	case "markdown":
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		for _, quote := range response.Quotes {
+			fmt.Fprint(w, quoteToMarkdown(quote))
+		}
+	case "yaml":
+		w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
+		fmt.Fprint(w, quotesToYAML(response.Quotes))
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func (api *API) formatResponseQuote(w http.ResponseWriter, quote ResponseQuote, responseInfo ResponseInfo) {
 	switch responseInfo.Format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
@@ -328,7 +541,7 @@ func (api *API) formatResponse(w http.ResponseWriter, quote ResponseQuote, respo
 
 	case "html":
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, quoteToHTML(quote))
+		fmt.Fprint(w, quoteToHTML(quote, ""))
 
 	case "text":
 		w.Header().Set("Content-Type", "text/plain")
