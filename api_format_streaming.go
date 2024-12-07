@@ -37,16 +37,16 @@ func getWriter(w http.ResponseWriter, useGzip bool) (io.Writer, func() error, er
 	return writer, cleanup, nil
 }
 
-func streamQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData) {
-	if requestData.Total == 1 {
-		normalQuotesJSON(w, api, requestData)
+func streamQuotesJSON(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
+	if RequestDataList.Total == 1 {
+		normalQuotesJSON(w, api, RequestDataList)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	var writer Writer
-	if requestData.Gzip {
+	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		defer gw.Close()
@@ -63,7 +63,7 @@ func streamQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData)
 	}
 
 	isFirst := true
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
 		if !isFirst {
 			if _, err := writer.Write([]byte(",")); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -84,7 +84,7 @@ func streamQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData)
 		return
 	}
 
-	if err := json.NewEncoder(writer).Encode(requestData.Pagination); err != nil {
+	if err := json.NewEncoder(writer).Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -100,18 +100,18 @@ func streamQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData)
 	}
 }
 
-func normalQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData) {
+func normalQuotesJSON(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	w.Header().Set("Content-Type", "application/json")
 
 	response := struct {
 		Quotes     []ResponseQuote `json:"quotes"`
 		Pagination Pagination      `json:"pagination"`
 	}{
-		Quotes:     make([]ResponseQuote, 0, requestData.EndIndex-requestData.StartIndex),
-		Pagination: requestData.Pagination,
+		Quotes:     make([]ResponseQuote, 0, RequestDataList.EndIndex-RequestDataList.StartIndex),
+		Pagination: RequestDataList.Pagination,
 	}
 
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
 		response.Quotes = append(response.Quotes, api.Quotes[i].CreateResponseQuote(i))
 	}
 
@@ -122,7 +122,7 @@ func normalQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData)
 		return
 	}
 
-	if requestData.Gzip {
+	if false && RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
@@ -142,7 +142,7 @@ func normalQuotesJSON(w http.ResponseWriter, api *API, requestData *RequestData)
 	}
 }
 
-func streamQuotesJSONMEM(w http.ResponseWriter, api *API, requestData *RequestData) {
+func streamQuotesJSONMEM(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -150,7 +150,7 @@ func streamQuotesJSONMEM(w http.ResponseWriter, api *API, requestData *RequestDa
 	bw.Write([]byte(`{"quotes":[`))
 
 	isFirst := true
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
 		if !isFirst {
 			bw.Write([]byte(","))
 		} else {
@@ -164,7 +164,7 @@ func streamQuotesJSONMEM(w http.ResponseWriter, api *API, requestData *RequestDa
 	}
 
 	bw.Write([]byte(`],"pagination":`))
-	if err := json.NewEncoder(bw).Encode(requestData.Pagination); err != nil {
+	if err := json.NewEncoder(bw).Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -172,7 +172,7 @@ func streamQuotesJSONMEM(w http.ResponseWriter, api *API, requestData *RequestDa
 	bw.Flush()
 }
 
-func streamQuotesJSONMEM2(w http.ResponseWriter, api *API, requestData *RequestData) {
+func streamQuotesJSONMEM2(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -186,8 +186,8 @@ func streamQuotesJSONMEM2(w http.ResponseWriter, api *API, requestData *RequestD
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
-		if i > requestData.StartIndex {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
+		if i > RequestDataList.StartIndex {
 			bw.WriteString(",")
 		}
 
@@ -204,7 +204,7 @@ func streamQuotesJSONMEM2(w http.ResponseWriter, api *API, requestData *RequestD
 
 	// Add pagination
 	bw.WriteString(`],"pagination":`)
-	if err := encoder.Encode(requestData.Pagination); err != nil {
+	if err := encoder.Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -216,7 +216,7 @@ func streamQuotesJSONMEM2(w http.ResponseWriter, api *API, requestData *RequestD
 	bw.Flush()
 }
 
-func streamQuotesJSONMEM3(w http.ResponseWriter, api *API, requestData *RequestData) {
+func streamQuotesJSONMEM3(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -226,8 +226,8 @@ func streamQuotesJSONMEM3(w http.ResponseWriter, api *API, requestData *RequestD
 	// Write the initial JSON fragment
 	w.Write([]byte(`{"quotes":[`))
 
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
-		if i > requestData.StartIndex {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
+		if i > RequestDataList.StartIndex {
 			w.Write([]byte(`,`))
 		}
 
@@ -239,21 +239,21 @@ func streamQuotesJSONMEM3(w http.ResponseWriter, api *API, requestData *RequestD
 
 	// Write the pagination and closing JSON fragment
 	w.Write([]byte(`],"pagination":`))
-	if err := encoder.Encode(requestData.Pagination); err != nil {
+	if err := encoder.Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write([]byte(`}`))
 }
 
-func streamQuotesJSONV1(w http.ResponseWriter, api *API, requestData *RequestData) {
+func streamQuotesJSONV1(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	var writer io.Writer
 	var bufWriter *bufio.Writer
 
 	// Calculate the approximate size of the response
-	approximateSize := requestData.Total*200 + 100 // Assuming average quote size of 200 bytes + extra for pagination
+	approximateSize := RequestDataList.Total*200 + 100 // Assuming average quote size of 200 bytes + extra for pagination
 
-	if requestData.Gzip {
+	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		defer gw.Close()
@@ -276,8 +276,8 @@ func streamQuotesJSONV1(w http.ResponseWriter, api *API, requestData *RequestDat
 		return
 	}
 
-	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
-		if i > requestData.StartIndex {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex; i++ {
+		if i > RequestDataList.StartIndex {
 			if _, err := writer.Write([]byte(",")); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -296,7 +296,7 @@ func streamQuotesJSONV1(w http.ResponseWriter, api *API, requestData *RequestDat
 		return
 	}
 
-	if err := enc.Encode(requestData.Pagination); err != nil {
+	if err := enc.Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -312,14 +312,14 @@ func streamQuotesJSONV1(w http.ResponseWriter, api *API, requestData *RequestDat
 	}
 }
 
-func streamQuotesJSONV3(w http.ResponseWriter, api *API, requestData *RequestData) {
+func streamQuotesJSONV3(w http.ResponseWriter, api *API, RequestDataList *RequestDataList) {
 	var writer io.Writer
 	var bufWriter *bufio.Writer
 
 	// Calculate the approximate size of the response
-	approximateSize := requestData.Total*200 + 100
+	approximateSize := RequestDataList.Total*200 + 100
 
-	if requestData.Gzip {
+	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		defer gw.Close()
@@ -342,7 +342,7 @@ func streamQuotesJSONV3(w http.ResponseWriter, api *API, requestData *RequestDat
 		return
 	}
 
-	for i := requestData.StartIndex; i < requestData.EndIndex-1; i++ {
+	for i := RequestDataList.StartIndex; i < RequestDataList.EndIndex-1; i++ {
 		if err := enc.Encode(api.Quotes[i].CreateResponseQuote(i)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -355,8 +355,8 @@ func streamQuotesJSONV3(w http.ResponseWriter, api *API, requestData *RequestDat
 	}
 
 	// Handle the last item without a trailing comma
-	if requestData.EndIndex > requestData.StartIndex {
-		if err := enc.Encode(api.Quotes[requestData.EndIndex-1].CreateResponseQuote(requestData.EndIndex - 1)); err != nil {
+	if RequestDataList.EndIndex > RequestDataList.StartIndex {
+		if err := enc.Encode(api.Quotes[RequestDataList.EndIndex-1].CreateResponseQuote(RequestDataList.EndIndex - 1)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -367,7 +367,7 @@ func streamQuotesJSONV3(w http.ResponseWriter, api *API, requestData *RequestDat
 		return
 	}
 
-	if err := enc.Encode(requestData.Pagination); err != nil {
+	if err := enc.Encode(RequestDataList.Pagination); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -383,27 +383,27 @@ func streamQuotesJSONV3(w http.ResponseWriter, api *API, requestData *RequestDat
 	}
 }
 
-func (api *API) formatStreamingResponse(w http.ResponseWriter, requestData *RequestData) {
-	w.Header().Set("Current-Page", strconv.Itoa(requestData.Pagination.Page))
-	w.Header().Set("Page-Size", strconv.Itoa(requestData.Pagination.PageSize))
-	w.Header().Set("Total-Count", strconv.Itoa(requestData.Pagination.Total))
-	w.Header().Set("Total-Pages", strconv.Itoa(requestData.Pagination.Pages))
+func (api *API) formatStreamingResponse(w http.ResponseWriter, RequestDataList *RequestDataList) {
+	w.Header().Set("Current-Page", strconv.Itoa(RequestDataList.Pagination.Page))
+	w.Header().Set("Page-Size", strconv.Itoa(RequestDataList.Pagination.PageSize))
+	w.Header().Set("Total-Count", strconv.Itoa(RequestDataList.Pagination.Total))
+	w.Header().Set("Total-Pages", strconv.Itoa(RequestDataList.Pagination.Pages))
 
-	switch requestData.Format {
+	switch RequestDataList.Format {
 	case "json":
-		streamQuotesJSON(w, api, requestData)
+		streamQuotesJSON(w, api, RequestDataList)
 	case "anker":
-		normalQuotesJSON(w, api, requestData)
+		normalQuotesJSON(w, api, RequestDataList)
 	case "json2":
-		streamQuotesJSONMEM(w, api, requestData)
+		streamQuotesJSONMEM(w, api, RequestDataList)
 	case "json3":
-		streamQuotesJSONMEM2(w, api, requestData)
+		streamQuotesJSONMEM2(w, api, RequestDataList)
 	case "json4":
-		streamQuotesJSONV1(w, api, requestData)
+		streamQuotesJSONV1(w, api, RequestDataList)
 	case "json5":
-		streamQuotesJSONV3(w, api, requestData)
+		streamQuotesJSONV3(w, api, RequestDataList)
 	case "json6":
-		streamQuotesJSONMEM3(w, api, requestData)
+		streamQuotesJSONMEM3(w, api, RequestDataList)
 
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)

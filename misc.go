@@ -85,12 +85,15 @@ type Pagination struct {
 }
 
 func (api *API) paginate(total int, page int, pageSize int) Pagination {
+
 	if page < 1 {
 		page = 1
 	}
+
 	if pageSize < 1 {
 		pageSize = api.DefaultPageSize
 	}
+
 	if pageSize > api.MaxPageSize {
 		pageSize = api.MaxPageSize
 	}

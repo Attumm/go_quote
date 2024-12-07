@@ -19,6 +19,7 @@ type API struct {
 	Tags            IndexStructure
 	DefaultPageSize int
 	MaxPageSize     int
+	Runtime         string
 }
 
 const PAGESIZE = "page_size"
@@ -230,7 +231,7 @@ func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type RequestData struct {
+type RequestDataList struct {
 	Gzip       bool
 	Format     string
 	Page       int
@@ -241,7 +242,7 @@ type RequestData struct {
 	Total      int
 }
 
-func createRequestData(r *http.Request, api *API) *RequestData {
+func createRequestDataList(r *http.Request, api *API) *RequestDataList {
 	urlParameters := r.URL.Query()
 	page, _ := strconv.Atoi(urlParameters.Get("page"))
 	pageSize, _ := strconv.Atoi(urlParameters.Get(PAGESIZE))
@@ -250,8 +251,8 @@ func createRequestData(r *http.Request, api *API) *RequestData {
 	startIndex, endIndex, capacity := calculateSafeIndices(len(api.Quotes), pagination)
 
 	gzip := urlParameters.Get("gzip") == "true" || strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip")
-	return &RequestData{
-		Gzip:       gzip,
+	return &RequestDataList{
+		Gzip:       gzip && false,
 		Format:     getOutputFormat(r),
 		Page:       page,
 		PageSize:   pageSize,
@@ -262,14 +263,46 @@ func createRequestData(r *http.Request, api *API) *RequestData {
 	}
 }
 
+type RequestData struct {
+	Gzip   bool
+	Format string
+}
+
+func createRequestData(r *http.Request, api *API) *RequestData {
+	urlParameters := r.URL.Query()
+	gzip := urlParameters.Get("gzip") == "true" || strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip")
+	return &RequestData{
+		Gzip:   gzip,
+		Format: getOutputFormat(r),
+	}
+}
+
+type ResponseInfo struct {
+	Gzip     bool
+	QuoteID  int
+	BaseURL  string
+	QuoteURL string
+	Format   string
+}
+
+func getResponseInfo(r *http.Request, quoteID int, requestdata *RequestData) *ResponseInfo {
+	baseURL := fmt.Sprintf("%s://%s", scheme(r), r.Host)
+	return &ResponseInfo{
+		Gzip:     requestdata.Gzip,
+		Format:   requestdata.Format,
+		QuoteID:  quoteID,
+		BaseURL:  baseURL,
+		QuoteURL: fmt.Sprintf("%s/quote/%d", baseURL, quoteID),
+	}
+}
+
 func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
-	requestData := createRequestData(r, api)
-	//fmt.Println(r)
-	//fmt.Println(requestData)
+	requestData := createRequestDataList(r, api)
 	api.formatStreamingResponse(w, requestData)
 }
 
 func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
+	requestData := createRequestData(r, api)
 	if len(api.Quotes) == 0 {
 		http.Error(w, "No quotes available", http.StatusNotFound)
 		return
@@ -286,11 +319,12 @@ func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	quote := api.Quotes[quoteID].CreateResponseQuote(quoteID)
 
-	responseInfo := getResponseInfo(r, quoteID)
+	responseInfo := getResponseInfo(r, quoteID, requestData)
 	api.formatResponseQuote(w, quote, responseInfo)
 }
 
 func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
+	requestData := createRequestData(r, api)
 	quoteID := 1
 	quote := api.Quotes[quoteID].CreateResponseQuote(quoteID)
 
@@ -299,11 +333,12 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
 		Format      string
 		ContentType string
 		Example     string
+		IsAudio     bool
 	}
 
 	examples := make([]FormatExample, 0, len(OutputFormats))
 
-	responseInfo := getResponseInfo(r, quoteID)
+	responseInfo := getResponseInfo(r, quoteID, requestData)
 	for format, contentType := range OutputFormats {
 		responseInfo.Format = format
 
@@ -315,11 +350,14 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
 
 		api.formatResponseQuote(respWriter, quote, responseInfo)
 
+		isAudio := format == "ogg" || format == "mp3" || format == "aiff" || format == "wav"
+
 		examples = append(examples, FormatExample{
 			Name:        format,
 			Format:      format,
 			ContentType: contentType,
 			Example:     buf.String(),
+			IsAudio:     isAudio,
 		})
 	}
 
@@ -424,6 +462,10 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
         .preview-content {
             padding: 1rem;
         }
+        audio {
+            width: 100%;
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -467,7 +509,14 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
                     <button class="preview-tab" onclick="showTab(this, 'source-{{.Format}}')">Source</button>
                 </div>
                 <div id="preview-{{.Format}}" class="preview-content">
-                    <iframe src="/quote/1?format={{.Format}}"></iframe>
+                    {{if .IsAudio}}
+                        <audio controls>
+                            <source src="/quote/1?format={{.Format}}" type="{{.ContentType}}">
+                            Your browser does not support the audio element.
+                        </audio>
+                    {{else}}
+                        <iframe src="/quote/1?format={{.Format}}"></iframe>
+                    {{end}}
                 </div>
                 <div id="source-{{.Format}}" class="preview-content" style="display: none;">
                     <pre>{{.Example}}</pre>
@@ -479,7 +528,6 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
 
     <script>
     function showTab(btn, contentId) {
-
         const tabs = btn.parentElement.getElementsByClassName('preview-tab');
         for (let tab of tabs) {
             tab.classList.remove('active');

@@ -75,6 +75,7 @@ func main() {
 		Tags:            tagIndex,
 		DefaultPageSize: config.DefaultPageSize,
 		MaxPageSize:     config.MaxPageSize,
+		Runtime:         runtime.GOOS,
 	}
 
 	api.SetupRoutes()
