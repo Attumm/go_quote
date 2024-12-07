@@ -27,6 +27,15 @@ var OutputFormats = map[string]string{
 	"oembed.xml": "text/xml+oembed",
 	"embed":      "text/html",
 	"embed.js":   "application/javascript",
+	"anker":      "application/json",
+	"json1":      "application/json",
+	"json2":      "application/json",
+	"json3":      "application/json",
+	"json4":      "application/json",
+	"json5":      "application/json",
+	"json6":      "application/json",
+	"json7":      "application/json",
+	"json8":      "application/json",
 }
 
 type OEmbedResponse struct {

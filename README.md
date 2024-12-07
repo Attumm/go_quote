@@ -132,3 +132,5 @@ Percentage of the requests served within a certain time (ms)
 
 - API Base URL: [`http://127.0.0.1:8000`](http://127.0.0.1:8000)
 - Docs: [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs)
+
+bash scripts/multi_benchmark.sh 2>&1 | bash scripts/read_benchmark.sh

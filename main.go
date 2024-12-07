@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"time"
 )
 
 type Config struct {
@@ -18,12 +19,26 @@ type Config struct {
 	Host            string `settingo:"Host for the API server"`
 	DefaultPageSize int    `settingo:"Page size to use for the API server"`
 	MaxPageSize     int    `settingo:"Maximum quotes for the API server"`
+	MemoryDebugLog  bool   `settingo:"Enable periodic memory debug log"`
+}
+
+func logMemoryUsagePeriodically() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		log.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+		log.Printf("TotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+		log.Printf("Sys = %v MiB", bToMb(m.Sys))
+		log.Printf("NumGC = %v\n", m.NumGC)
+	}
 }
 
 func main() {
 	config := &Config{
-		Filename:        "data/quotes.csv",
-		Storage:         "csv",
+		Filename:        "data/quotes.bytesz",
+		Storage:         "bytesz",
 		Convert:         false,
 		ConvertStorage:  "bytesz",
 		OutputDir:       "data",
@@ -31,11 +46,15 @@ func main() {
 		Host:            "0.0.0.0",
 		DefaultPageSize: 10,
 		MaxPageSize:     1000000,
+		MemoryDebugLog:  false,
 	}
 
 	settingo.ParseTo(config)
 
 	PrintMemUsage()
+	if config.MemoryDebugLog {
+		go logMemoryUsagePeriodically()
+	}
 
 	runtime.GC()
 	quotes, err := LoadQuotes(config.Filename, config.Storage)
@@ -44,22 +63,8 @@ func main() {
 	}
 	fmt.Printf("Loaded %d quotes from %s\n", len(quotes), config.Filename)
 	runtime.GC()
-	/*
-		if config.Convert {
-			outputFilename := getConvertedFilename(config.Filename, config.ConvertStorage, config.OutputDir)
-			err := ConvertQuotes(quotes, outputFilename, config.ConvertStorage)
 
-			if err != nil {
-				log.Fatalf("Error converting quotes: %v", err)
-			}
-			fmt.Printf("Converted quotes to %s and saved as %s\n", config.ConvertStorage, outputFilename)
-		}
-
-	*/
-	PrintMemUsage()
-	runtime.GC()
 	fmt.Printf("Total quotes processed: %d\n", len(quotes))
-	PrintMemUsage()
 
 	authorIndex := BuildAuthorIndex(quotes)
 	tagIndex := BuildTagIndex(quotes)

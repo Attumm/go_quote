@@ -1,5 +1,10 @@
 go_quote
 
+benchmark
+benchmark_results
+
+data
+
 .DS_Store
 .AppleDouble
 .LSOverride

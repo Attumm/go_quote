@@ -230,24 +230,43 @@ func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+type RequestData struct {
+	Gzip       bool
+	Format     string
+	Page       int
+	PageSize   int
+	Pagination Pagination
+	StartIndex int
+	EndIndex   int
+	Total      int
+}
+
+func createRequestData(r *http.Request, api *API) *RequestData {
+	urlParameters := r.URL.Query()
+	page, _ := strconv.Atoi(urlParameters.Get("page"))
+	pageSize, _ := strconv.Atoi(urlParameters.Get(PAGESIZE))
 
 	pagination := api.paginate(len(api.Quotes), page, pageSize)
 	startIndex, endIndex, capacity := calculateSafeIndices(len(api.Quotes), pagination)
 
-	quotes := make([]ResponseQuote, 0, capacity)
-	for i := startIndex; i < endIndex; i++ {
-		quotes = append(quotes, api.Quotes[i].CreateResponseQuote(i))
-	}
-
-	response := PaginatedQuotes{
-		Quotes:     quotes,
+	gzip := urlParameters.Get("gzip") == "true" || strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip")
+	return &RequestData{
+		Gzip:       gzip,
+		Format:     getOutputFormat(r),
+		Page:       page,
+		PageSize:   pageSize,
 		Pagination: pagination,
+		StartIndex: startIndex,
+		EndIndex:   endIndex,
+		Total:      capacity,
 	}
+}
 
-	api.formatResponseQuotes(w, response, getOutputFormat(r))
+func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
+	requestData := createRequestData(r, api)
+	//fmt.Println(r)
+	//fmt.Println(requestData)
+	api.formatStreamingResponse(w, requestData)
 }
 
 func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {

@@ -23,8 +23,8 @@ COPY --from=builder /app/go_quote .
 COPY data/quotes.bytesz data/quotes.bytesz
 
 # Set GOMAXPROCS environment variable
+# This version will run under a single core.
 ENV GOMAXPROCS=1
 
-# Set the entrypoint
 ENTRYPOINT ["./go_quote", "-FILENAME", "data/quotes.bytesz", "-STORAGE", "bytesz"]
 
