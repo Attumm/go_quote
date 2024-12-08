@@ -130,7 +130,7 @@ func quoteToSVG(q ResponseQuote) string {
         <text class="quote">%s</text>
         <text x="25" y="%d" class="author">%s</text>
         %s
-        <text x="25" y="%d" class="metadata">Quote ID: %d</text>
+        <text x="25" y="%d" class="metadata">ID: %d</text>
     </svg>`
 
 	processedText := processQuoteText(maxChars, q.Text)
@@ -397,6 +397,7 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
 		strings.TrimSpace(quote.Author))
 
 	audioURL := fmt.Sprintf("/quote/%d?format=wav", quote.ID)
+	quoteLink := fmt.Sprintf("/quote/%d", quote.ID)
 
 	return fmt.Sprintf(`
     <div class="quote-container">
@@ -404,17 +405,29 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
         %s
         <div class="tags">%s</div>
         <div class="footer">
-           <audio controls preload="none">
-                <source src="%s" type="audio/wav">
-                Your browser does not support the audio element.
-            </audio>
-            <span class="quote-id">Quote ID: %d</span>
-            <button class="next-button" onclick="location.href='/random-quote'">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 4v6h-6"/>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-            </button>
+            <div class="audio-container">
+                <audio controls id="audio-%d" src="%s" preload="none">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            <div class="button-container">
+                <a href="%s" class="quote-id">Quote ID: %d</a>
+                <button class="icon-button share-button" onclick="shareQuote(event, '%s')" title="Share Quote">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                </button>
+                <button class="icon-button next-button" onclick="location.href='/random-quote'" title="Next Quote">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 4v6h-6"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
     <style>
@@ -489,8 +502,17 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
         .quote-id {
             color: #aab8c2;
             font-size: 12px !important;
+            text-decoration: none;
         }
-        .next-button {
+        .quote-id:hover {
+            color: #1da1f2;
+        }
+        .button-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .icon-button {
             background-color: transparent;
             color: #657786;
             border: none;
@@ -499,8 +521,89 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: color 0.3s ease;
         }
-        .next-button:hover {
+        .icon-button:hover {
+            color: #1da1f2;
+        }
+        .share-button {
+            position: relative;
+        }
+        .share-button::after {
+            content: "Copied!";
+            position: absolute;
+            bottom: 100%%;
+            left: 50%%;
+            transform: translateX(-50%%);
+            background-color: #657786;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .share-button.copied::after {
+            opacity: 1;
+        }
+        .audio-container {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .audio-container audio {
+            width: 100%%;
+            height: 30px;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .audio-container audio:hover {
+            opacity: 0.8;
+        }
+        .audio-container audio::-webkit-media-controls-enclosure {
+            background-color: #f1f3f5;
+            border-radius: 16px;
+        }
+        .audio-container audio::-webkit-media-controls-panel {
+            background-color: transparent;
+        }
+        .audio-container audio::-webkit-media-controls-play-button {
+            background-color: #657786;
+            border-radius: 50%%;
+        }
+        .audio-container audio::-webkit-media-controls-current-time-display,
+        .audio-container audio::-webkit-media-controls-time-remaining-display {
+            color: #657786;
+        }
+        .audio-container audio::-webkit-media-controls-timeline {
+            background-color: #e1e8ed;
+            border-radius: 10px;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        .audio-container audio::-webkit-media-controls-volume-slider,
+        .audio-container audio::-webkit-media-controls-mute-button {
+            display: none;
+        }
+        .social-share {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .social-button {
+            background-color: #f1f3f5;
+            color: #657786;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 14px !important;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .social-button:hover {
+            background-color: #e1e8ed;
             color: #1da1f2;
         }
         @media screen and (max-width: 600px) {
@@ -513,9 +616,61 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
             .tag {
                 font-size: 12px !important;
             }
+            .audio-container audio {
+                height: 25px;
+            }
         }
     </style>
-    `, quote.Text, authorLink, tagHTML.String(), audioURL, quote.ID)
+    <script>
+   function shareQuote(event, quoteLink) {
+    event.preventDefault();
+    const shareUrl = window.location.origin + quoteLink;
+
+    if (navigator.share) {
+        navigator.share({
+            title: 'Quote',
+            text: 'Check out this quote!',
+            url: shareUrl
+        }).then(() => {
+            console.log('Shared successfully');
+        }).catch((error) => {
+            console.log('Error sharing:', error);
+            fallbackCopyToClipboard(shareUrl);
+        });
+    } else {
+        fallbackCopyToClipboard(shareUrl);
+    }
+}
+
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";  // Avoid scrolling to bottom
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        const msg = successful ? 'successful' : 'unsuccessful';
+        console.log('Fallback: Copying text command was ' + msg);
+        showCopiedFeedback();
+    } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function showCopiedFeedback() {
+    const shareButton = document.querySelector('.share-button');
+    shareButton.classList.add('copied');
+    setTimeout(() => {
+        shareButton.classList.remove('copied');
+    }, 2000);
+}
+    </script>
+    `, quote.Text, authorLink, tagHTML.String(), quote.ID, audioURL, quoteLink, quote.ID, quoteLink)
 }
 
 func serveJSONQuote(w http.ResponseWriter, q ResponseQuote, api *API, requestData *ResponseInfo) {
