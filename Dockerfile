@@ -4,7 +4,8 @@ RUN apt-get update && \
     apt-get install -y software-properties-common && \
     echo "deb http://deb.debian.org/debian bullseye contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
-    apt-get install -y libttspico-utils libttspico0 libpopt0
+    apt-get install -y libttspico-utils libttspico0 libpopt0 && \
+    apt-get clean
 
 RUN apt-get update && \
     apt-get install -y software-properties-common && \
