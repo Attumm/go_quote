@@ -552,12 +552,11 @@ func quoteToHTML(quote ResponseQuote, highlightedTag string) string {
             margin-bottom: 15px;
         }
         .audio-container audio {
-            width: 100%%;
             height: 30px;
             opacity: 0.5;
             transition: opacity 0.3s ease;
-            border-radius: 16px;
             overflow: hidden;
+            border-radius: 16px;
         }
         .audio-container audio:hover {
             opacity: 0.8;

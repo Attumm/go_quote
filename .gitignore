@@ -17,4 +17,8 @@ data/*
 
 *.log
 
+
 .env
+
+*.pyc
+__pycache__/
