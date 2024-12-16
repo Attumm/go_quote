@@ -1,7 +1,31 @@
+import re
 import csv
 
 def custom_quoting(field):
     return field.startswith('"') and field.endswith('"')
+
+
+def parse_text(s):
+    leading_spaces = len(s) - len(s.lstrip(' '))
+    trailing_spaces = len(s) - len(s.rstrip(' '))
+
+    core = s.strip()
+    core = re.sub(r"\b(i'm|im)\b", "I'm", core, flags=re.IGNORECASE)
+    core = re.sub(r"(?<!\w)\bi\b(?!\w)", "I", core)
+    core = re.sub(r'([.!?]\s*)([a-z])', lambda m: m.group(1) + m.group(2).upper(), core)
+
+    if core:
+        core = core[0].upper() + core[1:]
+
+    if len(core) > 2 and not core.endswith(('.', '!', '?')):
+        core += '.'
+
+    result = ' ' * leading_spaces + core + ' ' * trailing_spaces
+
+    if not core.strip():
+        return s
+
+    return result
 
 
 def parser(item):
@@ -12,10 +36,12 @@ def parser(item):
     if "," in item["author"]:
         item["author"] = item["author"].split(",")[0]
 
-    item["quote"] = item["quote"].strip().capitalize()
     item["author"] = item["author"].strip()
 
+    item["quote"] = parse_text(item["quote"])
+
     return item
+
 
 
 invalid_tags = {"kink", "bdsm", "erotic", "sex"}
