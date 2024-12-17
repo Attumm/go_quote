@@ -755,15 +755,12 @@ func serveSVGQuote(w http.ResponseWriter, q ResponseQuote, api *API, responseInf
 	fmt.Fprint(w, quoteToSVG(q))
 }
 func serveSVGQuoteDownload(w http.ResponseWriter, q ResponseQuote, api *API, responseInfo *ResponseInfo) {
-	// Generate the SVG content
 	svgContent := quoteToSVG(q)
 
-	// Set headers for file download
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"quote_%d.svg\"", q.ID))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(svgContent)))
 
-	// Write the SVG content to the response
 	_, err := w.Write([]byte(svgContent))
 	if err != nil {
 		http.Error(w, "Error writing SVG content", http.StatusInternalServerError)

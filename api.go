@@ -5,12 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+)
+
+type Category int
+
+const (
+	QuotesTypeRequest Category = iota
+	AuthorsTypeRequest
+	TagsTypeRequest
 )
 
 type API struct {
@@ -114,24 +123,11 @@ func (api *API) TagQuotesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+	requestData := createRequestDataList(r, api, TagsTypeRequest)
 
-	pagination := api.paginate(len(api.Tags.Names), page, pageSize)
+	tags := make([]TagResponse, 0, requestData.Total)
 
-	startIndex := (pagination.Page - 1) * pagination.PageSize
-	endIndex := startIndex + pagination.PageSize
-	if endIndex > len(api.Tags.Names) {
-		endIndex = len(api.Tags.Names)
-	}
-
-	capacity := endIndex - startIndex
-	if capacity < 0 {
-		capacity = 0
-	}
-	tags := make([]TagResponse, 0, capacity)
-
-	for i := startIndex; i < endIndex; i++ {
+	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
 		tags = append(tags, TagResponse{
 			Name:        api.Tags.Names[i],
 			TagID:       api.Tags.Names[i],
@@ -144,7 +140,7 @@ func (api *API) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 		Pagination Pagination    `json:"pagination"`
 	}{
 		Tags:       tags,
-		Pagination: pagination,
+		Pagination: requestData.Pagination,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -152,24 +148,10 @@ func (api *API) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) ListAuthorsHandler(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get(PAGESIZE))
+	requestData := createRequestDataList(r, api, AuthorsTypeRequest)
 
-	pagination := api.paginate(len(api.Authors.Names), page, pageSize)
-
-	startIndex := (pagination.Page - 1) * pagination.PageSize
-	endIndex := startIndex + pagination.PageSize
-	if endIndex > len(api.Authors.Names) {
-		endIndex = len(api.Authors.Names)
-	}
-
-	capacity := endIndex - startIndex
-	if capacity < 0 {
-		capacity = 0
-	}
-
-	authors := make([]AuthorResponse, 0, capacity)
-	for i := startIndex; i < endIndex; i++ {
+	authors := make([]AuthorResponse, 0, requestData.Total)
+	for i := requestData.StartIndex; i < requestData.EndIndex; i++ {
 		encodedName := api.Authors.Names[i]
 		decodedName, _ := url.QueryUnescape(encodedName)
 		authors = append(authors, AuthorResponse{
@@ -184,7 +166,7 @@ func (api *API) ListAuthorsHandler(w http.ResponseWriter, r *http.Request) {
 		Pagination Pagination       `json:"pagination"`
 	}{
 		Authors:    authors,
-		Pagination: pagination,
+		Pagination: requestData.Pagination,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -232,23 +214,36 @@ func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type RequestDataList struct {
-	Gzip       bool
-	Format     string
-	Page       int
-	PageSize   int
-	Pagination Pagination
-	StartIndex int
-	EndIndex   int
-	Total      int
+	Gzip            bool
+	Format          string
+	Page            int
+	PageSize        int
+	Pagination      Pagination
+	StartIndex      int
+	EndIndex        int
+	Total           int
+	RequestCategory Category
 }
 
-func createRequestDataList(r *http.Request, api *API) *RequestDataList {
+func createRequestDataList(r *http.Request, api *API, category Category) *RequestDataList {
 	urlParameters := r.URL.Query()
 	page, _ := strconv.Atoi(urlParameters.Get("page"))
-	pageSize, _ := strconv.Atoi(urlParameters.Get(PAGESIZE))
+	pageSize, _ := strconv.Atoi(urlParameters.Get("pagesize"))
 
-	pagination := api.paginate(len(api.Quotes), page, pageSize)
-	startIndex, endIndex, capacity := calculateSafeIndices(len(api.Quotes), pagination)
+	var dataLen int
+	switch category {
+	case QuotesTypeRequest:
+		dataLen = api.Quotes.Len()
+	case AuthorsTypeRequest:
+		dataLen = api.Authors.Len()
+	case TagsTypeRequest:
+		dataLen = api.Tags.Len()
+	default:
+		log.Fatal("Invalid data type provided")
+	}
+
+	pagination := api.paginate(dataLen, page, pageSize)
+	startIndex, endIndex, capacity := calculateSafeIndices(dataLen, pagination)
 
 	gzip := urlParameters.Get("gzip") == "true" || strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip")
 	return &RequestDataList{
@@ -297,7 +292,7 @@ func getResponseInfo(r *http.Request, quoteID int, requestdata *RequestData) *Re
 }
 
 func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
-	requestData := createRequestDataList(r, api)
+	requestData := createRequestDataList(r, api, QuotesTypeRequest)
 	api.formatStreamingResponse(w, requestData)
 }
 

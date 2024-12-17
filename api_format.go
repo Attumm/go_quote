@@ -89,14 +89,18 @@ type XMLQuote struct {
 	Tags    []string `xml:"tags>tag"`
 }
 
-func (api *API) formatResponseQuotes(w http.ResponseWriter, response PaginatedQuotes, format string) {
-	w.Header().Set("Current-Page", strconv.Itoa(response.Pagination.Page))
-	w.Header().Set("Page-Size", strconv.Itoa(response.Pagination.PageSize))
-	w.Header().Set("Total-Count", strconv.Itoa(response.Pagination.Total))
-	w.Header().Set("Total-Pages", strconv.Itoa(response.Pagination.Pages))
-	if response.Pagination.Next != "" {
-		w.Header().Set("Next-Page", response.Pagination.Next)
+func setPaginationHeaders(w http.ResponseWriter, pagination Pagination) {
+	w.Header().Set("Current-Page", strconv.Itoa(pagination.Page))
+	w.Header().Set("Page-Size", strconv.Itoa(pagination.PageSize))
+	w.Header().Set("Total-Count", strconv.Itoa(pagination.Total))
+	w.Header().Set("Total-Pages", strconv.Itoa(pagination.Pages))
+	if pagination.Next != "" {
+		w.Header().Set("Next-Page", pagination.Next)
 	}
+}
+
+func (api *API) formatResponseQuotes(w http.ResponseWriter, response PaginatedQuotes, format string) {
+	setPaginationHeaders(w, response.Pagination)
 
 	switch format {
 	case "json":

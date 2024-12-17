@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 )
 
 type Writer interface {
@@ -384,10 +383,7 @@ func streamQuotesJSONV3(w http.ResponseWriter, api *API, RequestDataList *Reques
 }
 
 func (api *API) formatStreamingResponse(w http.ResponseWriter, RequestDataList *RequestDataList) {
-	w.Header().Set("Current-Page", strconv.Itoa(RequestDataList.Pagination.Page))
-	w.Header().Set("Page-Size", strconv.Itoa(RequestDataList.Pagination.PageSize))
-	w.Header().Set("Total-Count", strconv.Itoa(RequestDataList.Pagination.Total))
-	w.Header().Set("Total-Pages", strconv.Itoa(RequestDataList.Pagination.Pages))
+	setPaginationHeaders(w, RequestDataList.Pagination)
 
 	switch RequestDataList.Format {
 	case "json":

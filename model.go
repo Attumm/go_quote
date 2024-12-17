@@ -27,12 +27,17 @@ func (q Quote) CreateResponseQuote(id int) ResponseQuote {
 }
 
 type Quotes []Quote
+
+func (q Quotes) Len() int { return len(q) }
+
 type ResponseQuotes []ResponseQuote
 
 type IndexStructure struct {
 	Names        []string
 	NameToQuotes map[string][]int
 }
+
+func (is *IndexStructure) Len() int { return len(is.Names) }
 
 func NewIndexStructure() IndexStructure {
 	return IndexStructure{
@@ -51,6 +56,12 @@ func (is *IndexStructure) Add(name string, id int) {
 	}
 	is.NameToQuotes[parsedName] = append(is.NameToQuotes[parsedName], id)
 }
+
+// String method for DataType
+func (cat Category) String() string {
+	return [...]string{"QuotesTypeRequest", "AuthorsTypeRequest", "TagsTypeRequest"}[cat]
+}
+
 func BuildAuthorIndex(quotes Quotes) IndexStructure {
 	index := NewIndexStructure()
 	for i, quote := range quotes {
