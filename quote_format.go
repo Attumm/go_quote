@@ -17,10 +17,10 @@ import (
 )
 
 var VoiceFormats = map[string][]string{
-	"aiff": {"Albert", "Alice", "Alva", "Amira", "Anna", "Bad", "Bahh", "Bells", "Boing", "Bubbles", "Carmit", "Cellos", "Damayanti", "Daniel", "Daria", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Ioana", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kathy", "Kyoko", "Lana", "Laura", "Lekha", "Lesya", "Linh", "Luciana", "Majed", "Meijia", "Melina", "Milena", "Moira", "Montse", "Nora", "Organ", "Paulina", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sandy", "Sara", "Satu", "Shelley", "Sinji", "Tessa", "Thomas", "Tingting", "Trinoids", "Whisper", "Xander", "Yelda", "Yuna", "Zarvox", "Zosia", "Zuzana"},
-	"mp3":  {"Alice", "Alva", "Amira", "Anna", "Carmit", "Damayanti", "Daniel", "Daria", "Eddy", "Ellen", "Flo", "Good", "Grandma", "Grandpa", "Ioana", "Jacques", "Joana", "Kanya", "Karen", "Kyoko", "Lana", "Laura", "Lekha", "Lesya", "Linh", "Luciana", "Majed", "Meijia", "Melina", "Milena", "Moira", "Montse", "Nora", "Paulina", "Reed", "Rishi", "Rocko", "Samantha", "Sandy", "Sara", "Satu", "Shelley", "Sinji", "Tessa", "Thomas", "Tingting", "Xander", "Yelda", "Yuna", "Zarvox", "Zosia", "Zuzana"},
-	"ogg":  {"Albert", "Alice", "Alva", "Amira", "Anna", "Bad", "Bahh", "Bells", "Boing", "Bubbles", "Carmit", "Cellos", "Damayanti", "Daniel", "Daria", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Ioana", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kathy", "Kyoko", "Lana", "Laura", "Lekha", "Lesya", "Linh", "Luciana", "Majed", "Meijia", "Melina", "Milena", "Moira", "Montse", "Nora", "Organ", "Paulina", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sandy", "Sara", "Satu", "Shelley", "Sinji", "Tessa", "Thomas", "Tingting", "Trinoids", "Whisper", "Xander", "Yelda", "Yuna", "Zarvox", "Zosia", "Zuzana"},
-	"wav":  {"Albert", "Alice", "Alva", "Amira", "Anna", "Bad", "Bahh", "Bells", "Boing", "Bubbles", "Carmit", "Cellos", "Damayanti", "Daniel", "Daria", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Ioana", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kathy", "Kyoko", "Lana", "Laura", "Lekha", "Lesya", "Linh", "Luciana", "Majed", "Meijia", "Melina", "Milena", "Moira", "Montse", "Nora", "Organ", "Paulina", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sandy", "Sara", "Satu", "Shelley", "Sinji", "Tessa", "Thomas", "Tingting", "Trinoids", "Whisper", "Xander", "Yelda", "Yuna", "Zarvox", "Zosia", "Zuzana"},
+	"aiff": {"Albert", "Alice", "Amira", "Anna", "Bad", "Bells", "Boing", "Carmit", "Cellos", "Damayanti", "Daniel", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kyoko", "Laura", "Lekha", "Lesya", "Luciana", "Majed", "Meijia", "Melina", "Moira", "Organ", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sara", "Shelley", "Sinji", "Tessa", "Thomas", "Trinoids", "Whisper", "Xander", "Yuna", "Zarvox", "Zosia"},
+	"mp3":  {"Alice", "Amira", "Anna", "Carmit", "Damayanti", "Daniel", "Eddy", "Ellen", "Flo", "Good", "Grandma", "Grandpa", "Jacques", "Joana", "Kanya", "Karen", "Kyoko", "Laura", "Lekha", "Lesya", "Luciana", "Majed", "Meijia", "Melina", "Moira", "Reed", "Rishi", "Rocko", "Samantha", "Sara", "Shelley", "Sinji", "Tessa", "Thomas", "Xander", "Yuna", "Zarvox", "Zosia", "Zuzana"},
+	"ogg":  {"Albert", "Alice", "Amira", "Anna", "Bad", "Bells", "Boing", "Carmit", "Cellos", "Damayanti", "Daniel", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kyoko", "Laura", "Lekha", "Lesya", "Luciana", "Majed", "Meijia", "Melina", "Moira", "Organ", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sara", "Shelley", "Sinji", "Tessa", "Thomas", "Trinoids", "Whisper", "Xander", "Yuna", "Zarvox", "Zosia"},
+	"wav":  {"Albert", "Alice", "Amira", "Anna", "Bad", "Bells", "Boing", "Carmit", "Cellos", "Damayanti", "Daniel", "Wobble", "Eddy", "Ellen", "Flo", "Fred", "Good", "Grandma", "Grandpa", "Jester", "Jacques", "Joana", "Junior", "Kanya", "Karen", "Kyoko", "Laura", "Lekha", "Lesya", "Luciana", "Majed", "Meijia", "Melina", "Moira", "Organ", "Superstar", "Ralph", "Reed", "Rishi", "Rocko", "Samantha", "Sara", "Shelley", "Sinji", "Tessa", "Thomas", "Trinoids", "Whisper", "Xander", "Yuna", "Zarvox", "Zosia"},
 }
 
 func getRandomVoice(format string) string {
@@ -42,8 +42,30 @@ func serveAudioQuote(w http.ResponseWriter, q ResponseQuote, api *API, requestDa
 
 	var cmd *exec.Cmd
 
+	// good ones
+	goodVoices := []string{
+		"Whisper",
+		"Majed",
+		"Superstar",
+		"Ralph",
+		"Kyoko",
+	}
+	goodVoices = append(goodVoices, q.Text)
+
+	singingVoices := []string{
+		"Organ",
+		"Bad",
+		"Good",
+	}
+	singingVoices = append(singingVoices, q.Text)
+	scary := []string{
+		"Trinoids",
+	}
+	scary = append(scary, q.Text)
 	if api.Runtime == "darwin" {
-		args := []string{"-o", tempFile, "-v", getRandomVoice(format)}
+		voice := getRandomVoice(format)
+		fmt.Println("Used voice:", voice)
+		args := []string{"-o", tempFile, "-v", voice}
 		if format == "wav" {
 			args = append(args, "--data-format=LEF32@32000")
 		}

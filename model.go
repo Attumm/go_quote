@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+type Category int
+
+const (
+	QuotesTypeRequest Category = iota
+	AuthorsTypeRequest
+	TagsTypeRequest
+)
+
 type Quote struct {
 	Text   string
 	Author string
@@ -28,8 +36,6 @@ func (q Quote) CreateResponseQuote(id int) ResponseQuote {
 
 type Quotes []Quote
 
-func (q Quotes) Len() int { return len(q) }
-
 type ResponseQuotes []ResponseQuote
 
 type IndexStructure struct {
@@ -37,14 +43,13 @@ type IndexStructure struct {
 	NameToQuotes map[string][]int
 }
 
-func (is *IndexStructure) Len() int { return len(is.Names) }
-
 func NewIndexStructure() IndexStructure {
 	return IndexStructure{
 		Names:        make([]string, 0),
 		NameToQuotes: make(map[string][]int),
 	}
 }
+
 func (is *IndexStructure) Add(name string, id int) {
 	parsedName := strings.TrimSpace(name)
 	if len(parsedName) == 0 {
@@ -57,7 +62,10 @@ func (is *IndexStructure) Add(name string, id int) {
 	is.NameToQuotes[parsedName] = append(is.NameToQuotes[parsedName], id)
 }
 
-// String method for DataType
+func (is *IndexStructure) Len() int {
+	return len(is.Names)
+}
+
 func (cat Category) String() string {
 	return [...]string{"QuotesTypeRequest", "AuthorsTypeRequest", "TagsTypeRequest"}[cat]
 }

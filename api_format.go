@@ -77,7 +77,6 @@ func getOutputFormat(r *http.Request) string {
 			format = "text"
 		}
 	}
-
 	return format
 }
 

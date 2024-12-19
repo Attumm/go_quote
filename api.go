@@ -14,14 +14,6 @@ import (
 	"strings"
 )
 
-type Category int
-
-const (
-	QuotesTypeRequest Category = iota
-	AuthorsTypeRequest
-	TagsTypeRequest
-)
-
 type API struct {
 	Quotes          Quotes
 	Authors         IndexStructure
@@ -228,12 +220,12 @@ type RequestDataList struct {
 func createRequestDataList(r *http.Request, api *API, category Category) *RequestDataList {
 	urlParameters := r.URL.Query()
 	page, _ := strconv.Atoi(urlParameters.Get("page"))
-	pageSize, _ := strconv.Atoi(urlParameters.Get("pagesize"))
+	pageSize, _ := strconv.Atoi(urlParameters.Get(PAGESIZE))
 
 	var dataLen int
 	switch category {
 	case QuotesTypeRequest:
-		dataLen = api.Quotes.Len()
+		dataLen = len(api.Quotes)
 	case AuthorsTypeRequest:
 		dataLen = api.Authors.Len()
 	case TagsTypeRequest:
@@ -247,7 +239,7 @@ func createRequestDataList(r *http.Request, api *API, category Category) *Reques
 
 	gzip := urlParameters.Get("gzip") == "true" || strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip")
 	return &RequestDataList{
-		Gzip:       gzip && false,
+		Gzip:       gzip,
 		Format:     getOutputFormat(r),
 		Page:       page,
 		PageSize:   pageSize,

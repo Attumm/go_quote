@@ -61,13 +61,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading quotes: %v", err)
 	}
-	fmt.Printf("Loaded %d quotes from %s\n", len(quotes), config.Filename)
+	fmt.Printf("Loaded: %d quotes from %s\n", len(quotes), config.Filename)
 	runtime.GC()
 
 	fmt.Printf("Total quotes processed: %d\n", len(quotes))
 
 	authorIndex := BuildAuthorIndex(quotes)
 	tagIndex := BuildTagIndex(quotes)
+
+	fmt.Printf("Created index for Authors: %d and Tags: %d\n", authorIndex.Len(), tagIndex.Len())
 
 	api := &API{
 		Quotes:          quotes,
