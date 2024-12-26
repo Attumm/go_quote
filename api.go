@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-openapi/runtime/middleware"
 )
 
 type API struct {
@@ -24,6 +26,7 @@ type API struct {
 	Runtime         string
 	EnableLogging   bool
 	PermissiveCORS  bool
+	Swagger         bool
 }
 
 func (api *API) corsMiddleware(next http.Handler) http.Handler {
@@ -93,8 +96,9 @@ const PAGESIZE = "page_size"
 
 func (api *API) SetupRoutes(mux *http.ServeMux) {
 
-	mux.HandleFunc("/favicon.ico", api.faviconHandler)
-	mux.HandleFunc("/docs/", api.HandleFormatDocs)
+	mux.HandleFunc("/quotes/", api.ListQuotesHandler)
+	mux.HandleFunc("/random-quote", api.QuoteHandler)
+	mux.HandleFunc("/quote/", api.QuoteHandler)
 
 	mux.HandleFunc("/tags", api.ListTagsHandler)
 	mux.HandleFunc("/tags/", api.TagQuotesHandler)
@@ -102,14 +106,24 @@ func (api *API) SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/authors", api.ListAuthorsHandler)
 	mux.HandleFunc("/authors/", api.AuthorQuotesHandler)
 
-	mux.HandleFunc("/quotes/", api.ListQuotesHandler)
-	mux.HandleFunc("/random-quote", api.QuoteHandler)
-	mux.HandleFunc("/quote/", api.QuoteHandler)
 	mux.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
 		PrintMemUsage()
 		fmt.Fprintf(w, "Debug information printed to console")
 	})
+	mux.HandleFunc("/favicon.ico", api.faviconHandler)
+	mux.HandleFunc("/examples/", api.HandleFormatDocs)
+
 	mux.HandleFunc("/", api.QuoteHandler)
+
+	if api.Swagger {
+		opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.json"}
+		sh := middleware.SwaggerUI(opts, nil)
+		mux.Handle("/docs/", sh)
+		mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(SwaggerSpec))
+		})
+	}
 }
 
 func calculateSafeIndices(total int, pagination Pagination) (startIndex, endIndex, capacity int) {

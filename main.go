@@ -22,6 +22,7 @@ type Config struct {
 	MemoryDebugLog  bool   `settingo:"Enable periodic memory debug log"`
 	EnableLogging   bool   `settingo:"Enable logging of requests"`
 	PermissiveCORS  bool   `settingo:"Enable Permissive CORS"`
+	Swagger         bool   `settingo:"Enable swagger documentation"`
 }
 
 func logMemoryUsagePeriodically() {
@@ -51,6 +52,7 @@ func main() {
 		MemoryDebugLog:  false,
 		EnableLogging:   true,
 		PermissiveCORS:  true,
+		Swagger:         true,
 	}
 
 	settingo.ParseTo(config)
@@ -85,6 +87,7 @@ func main() {
 		Runtime:         runtime.GOOS,
 		EnableLogging:   config.EnableLogging,
 		PermissiveCORS:  config.PermissiveCORS,
+		Swagger:         config.Swagger,
 	}
 
 	mux := http.NewServeMux()
