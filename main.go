@@ -20,6 +20,7 @@ type Config struct {
 	DefaultPageSize int    `settingo:"Page size to use for the API server"`
 	MaxPageSize     int    `settingo:"Maximum quotes for the API server"`
 	MemoryDebugLog  bool   `settingo:"Enable periodic memory debug log"`
+	EnableLogging   bool   `settingo:"Enable logging of requests"`
 }
 
 func logMemoryUsagePeriodically() {
@@ -47,6 +48,7 @@ func main() {
 		DefaultPageSize: 10,
 		MaxPageSize:     1000000,
 		MemoryDebugLog:  false,
+		EnableLogging:   true,
 	}
 
 	settingo.ParseTo(config)
@@ -78,12 +80,15 @@ func main() {
 		DefaultPageSize: config.DefaultPageSize,
 		MaxPageSize:     config.MaxPageSize,
 		Runtime:         runtime.GOOS,
+		EnableLogging:   config.EnableLogging,
 	}
 
-	api.SetupRoutes()
+	mux := http.NewServeMux()
+	middleware := api.SetupMiddleware()
+	api.SetupRoutes(mux)
 
 	fmt.Printf("Starting server on port %s...\n", config.Port)
-	if err := http.ListenAndServe(config.Host+":"+config.Port, nil); err != nil {
+	if err := http.ListenAndServe(config.Host+":"+config.Port, middleware(mux)); err != nil {
 		log.Fatal(err)
 	}
 }

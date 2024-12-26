@@ -20,7 +20,6 @@ func streamQuotesJSON(w http.ResponseWriter, api *API, RequestDataList *RequestD
 	var bufWriter *bufio.Writer
 
 	approximateSize := RequestDataList.Total*200 + 100
-
 	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
@@ -93,16 +92,18 @@ func streamQuotesCSV(w http.ResponseWriter, api *API, RequestDataList *RequestDa
 
 	var writer io.Writer
 	var bufWriter *bufio.Writer
-	const bufferSize = 64 * 1024 // 64KB buffer, adjust as needed
 
+	approximateSize := RequestDataList.Total*200 + 100
 	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		bufWriter = bufio.NewWriterSize(gw, approximateSize)
+		defer bufWriter.Flush()
 		defer gw.Close()
-		bufWriter = bufio.NewWriterSize(gw, bufferSize)
 		writer = bufWriter
 	} else {
-		bufWriter = bufio.NewWriterSize(w, bufferSize)
+		bufWriter = bufio.NewWriterSize(w, approximateSize)
+		defer bufWriter.Flush()
 		writer = bufWriter
 	}
 
@@ -143,20 +144,20 @@ func streamQuotesXML(w http.ResponseWriter, api *API, RequestDataList *RequestDa
 
 	var writer io.Writer
 	var bufWriter *bufio.Writer
-	const bufferSize = 64 * 1024 // 64KB buffer, adjust as needed
+	approximateSize := RequestDataList.Total*200 + 100
 
 	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		bufWriter = bufio.NewWriterSize(gw, approximateSize)
+		defer bufWriter.Flush()
 		defer gw.Close()
-		bufWriter = bufio.NewWriterSize(gw, bufferSize)
 		writer = bufWriter
 	} else {
-		bufWriter = bufio.NewWriterSize(w, bufferSize)
+		bufWriter = bufio.NewWriterSize(w, approximateSize)
+		defer bufWriter.Flush()
 		writer = bufWriter
 	}
-
-	defer bufWriter.Flush()
 
 	w.WriteHeader(http.StatusOK)
 
@@ -197,20 +198,20 @@ func streamQuotesYAML(w http.ResponseWriter, api *API, RequestDataList *RequestD
 	w.Header().Set("Content-Type", "application/yaml")
 	w.Header().Set("Content-Disposition", "attachment; filename=quotes.yaml")
 
-	setPaginationHeaders(w, RequestDataList.Pagination)
-
 	var writer io.Writer
 	var bufWriter *bufio.Writer
-	const bufferSize = 64 * 1024 // 64KB buffer, adjust as needed
 
+	approximateSize := RequestDataList.Total*200 + 100
 	if RequestDataList.Gzip {
 		w.Header().Set("Content-Encoding", "gzip")
 		gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		bufWriter = bufio.NewWriterSize(gw, approximateSize)
+		defer bufWriter.Flush()
 		defer gw.Close()
-		bufWriter = bufio.NewWriterSize(gw, bufferSize)
 		writer = bufWriter
 	} else {
-		bufWriter = bufio.NewWriterSize(w, bufferSize)
+		bufWriter = bufio.NewWriterSize(w, approximateSize)
+		defer bufWriter.Flush()
 		writer = bufWriter
 	}
 
@@ -260,6 +261,10 @@ func (api *API) formatStreamingResponse(w http.ResponseWriter, RequestDataList *
 		streamQuotesCSV(w, api, RequestDataList)
 	case "yaml":
 		streamQuotesYAML(w, api, RequestDataList)
+	case "xml":
+		streamQuotesXML(w, api, RequestDataList)
+	case "html":
+		streamQuotesToHTML(w, api, RequestDataList)
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)
 	}

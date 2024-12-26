@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -16,7 +17,7 @@ func createHost(config *Config) string {
 }
 
 func TestQuotesEndpoint(t *testing.T) {
-	// Start the server // Use a different port for testing
+
 	testConfig, srv := startTestServer("8001")
 	defer func() {
 		if err := srv.Shutdown(context.Background()); err != nil {
@@ -24,17 +25,16 @@ func TestQuotesEndpoint(t *testing.T) {
 		}
 	}()
 
-	// Wait for the server to start
 	time.Sleep(time.Second)
 
 	testCases := []struct {
 		Url          string
 		ExpectedData string
 	}{
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=1&format=json2", "./test_data/expected_page_size_1.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=2&format=json2", "./test_data/expected_page_size_2.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=3&format=json2", "./test_data/expected_page_size_3.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=10&format=json2", "./test_data/expected_page_size_10.json"},
+		{"http://" + createHost(testConfig) + "/quotes/?page_size=1&format=json", "./test_data/expected_page_size_1.json"},
+		{"http://" + createHost(testConfig) + "/quotes/?page_size=2&format=json", "./test_data/expected_page_size_2.json"},
+		{"http://" + createHost(testConfig) + "/quotes/?page_size=3&format=json", "./test_data/expected_page_size_3.json"},
+		{"http://" + createHost(testConfig) + "/quotes/?page_size=10&format=json", "./test_data/expected_page_size_10.json"},
 	}
 
 	for _, tc := range testCases {
@@ -64,7 +64,8 @@ func TestQuotesEndpoint(t *testing.T) {
 			}
 
 			if !jsonEqual(actualJSON, expectedJSON) {
-				t.Errorf("Response does not match expected result for %s", tc.Url)
+				t.Errorf("Response does not match expected result for %s\nGOT:\n%s\nExpected\n%s", tc.Url, actualJSON, expectedJSON)
+
 			}
 		})
 	}
@@ -80,14 +81,11 @@ func startTestServer(port string) (*Config, *http.Server) {
 	config := &Config{
 		Filename:        "data/quotes.bytesz",
 		Storage:         "bytesz",
-		Convert:         false,
-		ConvertStorage:  "bytesz",
-		OutputDir:       "data",
 		Port:            port,
 		Host:            "127.0.0.1",
 		DefaultPageSize: 10,
 		MaxPageSize:     1000000,
-		MemoryDebugLog:  false,
+		EnableLogging:   false,
 	}
 
 	quotes, err := LoadQuotes(config.Filename, config.Storage)
@@ -104,12 +102,15 @@ func startTestServer(port string) (*Config, *http.Server) {
 		Tags:            tagIndex,
 		DefaultPageSize: config.DefaultPageSize,
 		MaxPageSize:     config.MaxPageSize,
+		Runtime:         runtime.GOOS,
+		EnableLogging:   config.EnableLogging,
 	}
-
-	api.SetupRoutes()
+	mux := http.NewServeMux()
+	api.SetupRoutes(mux)
 
 	srv := &http.Server{
-		Addr: createHost(config),
+		Addr:    createHost(config),
+		Handler: mux,
 	}
 
 	go func() {

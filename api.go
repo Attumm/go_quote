@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type API struct {
@@ -21,27 +22,71 @@ type API struct {
 	DefaultPageSize int
 	MaxPageSize     int
 	Runtime         string
+	EnableLogging   bool
+}
+
+func (api *API) logMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		URL := r.URL.String()
+
+		ip := r.Header.Get("X-Real-IP")
+		if ip == "" {
+			if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+				ip = strings.Split(forwardedFor, ",")[0]
+			} else {
+				ip = strings.Split(r.RemoteAddr, ":")[0]
+			}
+		}
+
+		log.Printf("%s UA: %q Referer: %q IP: %s Method: %s URL: %s",
+			start.Format(time.RFC3339),
+			r.UserAgent(),
+			r.Referer(),
+			ip,
+			r.Method,
+			URL,
+		)
+
+		defer func() {
+			log.Printf("took Duration: %s, URL: %s",
+				time.Since(start).String(),
+				URL,
+			)
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (api *API) SetupMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if api.EnableLogging {
+			next = api.logMiddleware(next)
+		}
+		return next
+	}
 }
 
 const PAGESIZE = "page_size"
 
-func (api *API) SetupRoutes() {
-	http.HandleFunc("/docs/", api.HandleFormatDocs)
+func (api *API) SetupRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/docs/", api.HandleFormatDocs)
 
-	http.HandleFunc("/tags", api.ListTagsHandler)
-	http.HandleFunc("/tags/", api.TagQuotesHandler)
+	mux.HandleFunc("/tags", api.ListTagsHandler)
+	mux.HandleFunc("/tags/", api.TagQuotesHandler)
 
-	http.HandleFunc("/authors", api.ListAuthorsHandler)
-	http.HandleFunc("/authors/", api.AuthorQuotesHandler)
+	mux.HandleFunc("/authors", api.ListAuthorsHandler)
+	mux.HandleFunc("/authors/", api.AuthorQuotesHandler)
 
-	http.HandleFunc("/quotes/", api.ListQuotesHandler)
-	http.HandleFunc("/random-quote", api.QuoteHandler)
-	http.HandleFunc("/quote/", api.QuoteHandler)
-	http.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/quotes/", api.ListQuotesHandler)
+	mux.HandleFunc("/random-quote", api.QuoteHandler)
+	mux.HandleFunc("/quote/", api.QuoteHandler)
+	mux.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
 		PrintMemUsage()
 		fmt.Fprintf(w, "Debug information printed to console")
 	})
-	http.HandleFunc("/", api.QuoteHandler)
+	mux.HandleFunc("/", api.QuoteHandler)
 }
 
 func calculateSafeIndices(total int, pagination Pagination) (startIndex, endIndex, capacity int) {
