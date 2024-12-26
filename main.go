@@ -21,6 +21,7 @@ type Config struct {
 	MaxPageSize     int    `settingo:"Maximum quotes for the API server"`
 	MemoryDebugLog  bool   `settingo:"Enable periodic memory debug log"`
 	EnableLogging   bool   `settingo:"Enable logging of requests"`
+	PermissiveCORS  bool   `settingo:"Enable Permissive CORS"`
 }
 
 func logMemoryUsagePeriodically() {
@@ -49,11 +50,13 @@ func main() {
 		MaxPageSize:     1000000,
 		MemoryDebugLog:  false,
 		EnableLogging:   true,
+		PermissiveCORS:  true,
 	}
 
 	settingo.ParseTo(config)
 
-	PrintMemUsage()
+	fmt.Printf("Started go-quote with permissive cors: %v\n", config.PermissiveCORS)
+
 	if config.MemoryDebugLog {
 		go logMemoryUsagePeriodically()
 	}
@@ -81,13 +84,14 @@ func main() {
 		MaxPageSize:     config.MaxPageSize,
 		Runtime:         runtime.GOOS,
 		EnableLogging:   config.EnableLogging,
+		PermissiveCORS:  config.PermissiveCORS,
 	}
 
 	mux := http.NewServeMux()
 	middleware := api.SetupMiddleware()
 	api.SetupRoutes(mux)
 
-	fmt.Printf("Starting server on port %s...\n", config.Port)
+	fmt.Printf("Starting server on port %s:%s...\n", config.Host, config.Port)
 	if err := http.ListenAndServe(config.Host+":"+config.Port, middleware(mux)); err != nil {
 		log.Fatal(err)
 	}

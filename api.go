@@ -23,6 +23,24 @@ type API struct {
 	MaxPageSize     int
 	Runtime         string
 	EnableLogging   bool
+	PermissiveCORS  bool
+}
+
+func (api *API) corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (api *API) logMiddleware(next http.Handler) http.Handler {
@@ -63,6 +81,9 @@ func (api *API) SetupMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if api.EnableLogging {
 			next = api.logMiddleware(next)
+		}
+		if api.PermissiveCORS {
+			next = api.corsMiddleware(next)
 		}
 		return next
 	}
