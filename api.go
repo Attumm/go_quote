@@ -92,6 +92,8 @@ func (api *API) SetupMiddleware() func(http.Handler) http.Handler {
 const PAGESIZE = "page_size"
 
 func (api *API) SetupRoutes(mux *http.ServeMux) {
+
+	mux.HandleFunc("/favicon.ico", api.faviconHandler)
 	mux.HandleFunc("/docs/", api.HandleFormatDocs)
 
 	mux.HandleFunc("/tags", api.ListTagsHandler)
@@ -374,6 +376,22 @@ func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	responseInfo := getResponseInfo(r, quoteID, requestData)
 	api.formatResponseQuote(w, quote, responseInfo)
+}
+
+const faviconIcon = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#4A5568" rx="6"/>
+  <path d="M11 22V17.3C11 14.4 12 11.7 15 10L16.5 11.5C14.5 13 13.8 14.8 13.7 16.5H16V22H11Z" fill="#E2E8F0"/>
+  <path d="M22 22V17.3C22 14.4 23 11.7 26 10L27.5 11.5C25.5 13 24.8 14.8 24.7 16.5H27V22H22Z" fill="#E2E8F0"/>
+</svg>
+`
+
+func (api *API) faviconHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+
+	w.Write([]byte(faviconIcon))
 }
 
 func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
