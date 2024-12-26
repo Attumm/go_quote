@@ -68,13 +68,20 @@ func (api *API) logMiddleware(next http.Handler) http.Handler {
 			r.Method,
 			URL,
 		)
+		next.ServeHTTP(w, r)
+		log.Printf("took Duration: %s, URL: %s",
+			time.Since(start).String(),
+			URL,
+		)
+	})
+}
 
-		defer func() {
-			log.Printf("took Duration: %s, URL: %s",
-				time.Since(start).String(),
-				URL,
-			)
-		}()
+func (api *API) attributionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("API-Name", "Go-quote")
+		w.Header().Set("Attribution", "If this API has helped you, please star it on GitHub: https://github.com/Attumm/go_quote")
+		w.Header().Set("Support", "For issues or questions visit: https://github.com/Attumm/go_quote/issues")
+		w.Header().Set("Docs", "For swagger docs visit: <url>/docs/")
 
 		next.ServeHTTP(w, r)
 	})
@@ -88,6 +95,7 @@ func (api *API) SetupMiddleware() func(http.Handler) http.Handler {
 		if api.PermissiveCORS {
 			next = api.corsMiddleware(next)
 		}
+		next = api.attributionMiddleware(next)
 		return next
 	}
 }
