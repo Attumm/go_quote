@@ -94,7 +94,7 @@ func setPaginationHeaders(w http.ResponseWriter, pagination Pagination) {
 	}
 }
 
-func (api *API) formatResponseQuotes(w http.ResponseWriter, response PaginatedQuotes, format string) {
+func (api *API) formatResponseQuotes(w http.ResponseWriter, response PaginatedQuotesResponse, format string) {
 	setPaginationHeaders(w, response.Pagination)
 
 	switch format {
