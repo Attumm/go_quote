@@ -106,15 +106,16 @@ const PAGESIZE = "page_size"
 
 func (api *API) SetupRoutes(mux *http.ServeMux) {
 
-	mux.HandleFunc("/quotes/", api.ListQuotesHandler)
-	mux.HandleFunc("/random-quote", api.QuoteHandler)
-	mux.HandleFunc("/quote/", api.QuoteHandler)
+	mux.HandleFunc("/quotes", api.ListQuotesHandler)
+	mux.HandleFunc("/quotes/", api.QuoteHandler)
 
 	mux.HandleFunc("/tags", api.ListTagsHandler)
 	mux.HandleFunc("/tags/", api.TagQuotesHandler)
 
 	mux.HandleFunc("/authors", api.ListAuthorsHandler)
 	mux.HandleFunc("/authors/", api.AuthorQuotesHandler)
+
+	mux.HandleFunc("/random-quote", api.QuoteHandler)
 
 	mux.HandleFunc("/debug", func(w http.ResponseWriter, r *http.Request) {
 		PrintMemUsage()
@@ -158,8 +159,8 @@ type PaginatedQuotes struct {
 
 type AuthorResponse struct {
 	Name        string `json:"name"`
-	AuthorID    string `json:"author-id"`
-	TotalQuotes int    `json:"total-quotes"`
+	AuthorID    string `json:"author_id"`
+	TotalQuotes int    `json:"total_quotes"`
 }
 
 type PaginatedAuthors struct {
@@ -169,8 +170,8 @@ type PaginatedAuthors struct {
 
 type TagResponse struct {
 	Name        string `json:"name"`
-	TagID       string `json:"tag-id"`
-	TotalQuotes int    `json:"total-quotes"`
+	TagID       string `json:"tag_id"`
+	TotalQuotes int    `json:"total_quotes"`
 }
 
 type PaginatedTags struct {
@@ -281,8 +282,8 @@ func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := struct {
 		Author      string          `json:"author"`
-		AuthorID    string          `json:"author-id"`
-		TotalQuotes int             `json:"total-quotes"`
+		AuthorID    string          `json:"author_id"`
+		TotalQuotes int             `json:"total_quotes"`
 		Quotes      []ResponseQuote `json:"quotes"`
 		Pagination  Pagination      `json:"pagination"`
 	}{
@@ -371,7 +372,7 @@ func getResponseInfo(r *http.Request, quoteID int, requestdata *RequestData) *Re
 		Format:   requestdata.Format,
 		QuoteID:  quoteID,
 		BaseURL:  baseURL,
-		QuoteURL: fmt.Sprintf("%s/quote/%d", baseURL, quoteID),
+		QuoteURL: fmt.Sprintf("%s/quotes/%d", baseURL, quoteID),
 	}
 }
 
@@ -570,13 +571,13 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
     <div class="method">
         <h2>Method 1: Using Format Parameter</h2>
         <p>Add <code>?format=TYPE</code> to your URL:</p>
-        <pre>GET /quote/1?format=json</pre>
+        <pre>GET /quotes/1?format=json</pre>
     </div>
 
     <div class="method">
         <h2>Method 2: Using Accept Header</h2>
         <p>Set the appropriate Accept header in your request:</p>
-        <pre>curl -H "Accept: application/json" /quote/1</pre>
+        <pre>curl -H "Accept: application/json" /quotes/1</pre>
     </div>
 
     <h2>Available Formats</h2>
@@ -589,14 +590,14 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
             
             <div class="try-links">
                 <h4>Try it:</h4>
-                <a href="/quote/1?format={{.Format}}" target="_blank">View {{.Format}} format</a>
+                <a href="/quotes/1?format={{.Format}}" target="_blank">View {{.Format}} format</a>
             </div>
 
             <h4>Using format parameter:</h4>
-            <pre>GET /quote/1?format={{.Format}}</pre>
+            <pre>GET /quotes/1?format={{.Format}}</pre>
 
             <h4>Using Accept header:</h4>
-            <pre>curl -H "Accept: {{.ContentType}}" /quote/1</pre>
+            <pre>curl -H "Accept: {{.ContentType}}" /quotes/1</pre>
 
             <div class="example-preview">
                 <div class="preview-tabs">
@@ -606,11 +607,11 @@ func (api *API) HandleFormatDocs(w http.ResponseWriter, r *http.Request) {
                 <div id="preview-{{.Format}}" class="preview-content">
                     {{if .IsAudio}}
                         <audio controls>
-                            <source src="/quote/1?format={{.Format}}" type="{{.ContentType}}">
+                            <source src="/quotes/1?format={{.Format}}" type="{{.ContentType}}">
                             Your browser does not support the audio element.
                         </audio>
                     {{else}}
-                        <iframe src="/quote/1?format={{.Format}}"></iframe>
+                        <iframe src="/quotes/1?format={{.Format}}"></iframe>
                     {{end}}
                 </div>
                 <div id="source-{{.Format}}" class="preview-content" style="display: none;">

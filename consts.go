@@ -9,7 +9,57 @@ const SwaggerSpec = `
     "description": "An API for quotes, authors, and tags."
   },
   "paths": {
-   "/quotes": {
+    "/random-quote": {
+      "get": {
+        "summary": "Get a random quote",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseQuote"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseQuote"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseQuote"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FormatParam"
+          },
+          {
+            "$ref": "#/components/parameters/AcceptHeader"
+          }
+        ]
+      }
+    },
+    "/quotes": {
       "get": {
         "summary": "List all quotes",
         "responses": {
@@ -37,32 +87,7 @@ const SwaggerSpec = `
         ]
       }
     },
-    "/random-quote": {
-      "get": {
-        "summary": "Get a random quote",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseQuote"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No quotes available"
-          }
-        },
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FormatParam"
-          }
-        ]
-      }
-    },
-    "/quote/{quoteId}": {
+    "/quotes/{quoteId}": {
       "get": {
         "summary": "Get a specific quote by ID",
         "parameters": [
@@ -76,6 +101,9 @@ const SwaggerSpec = `
           },
           {
             "$ref": "#/components/parameters/FormatParam"
+          },
+          {
+            "$ref": "#/components/parameters/AcceptHeader"
           }
         ],
         "responses": {
@@ -86,11 +114,68 @@ const SwaggerSpec = `
                 "schema": {
                   "$ref": "#/components/schemas/ResponseQuote"
                 }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseQuote"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseQuote"
+                }
               }
             }
           },
           "404": {
-            "description": "Quote not found"
+            "description": "Quote not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -157,7 +242,14 @@ const SwaggerSpec = `
             }
           },
           "404": {
-            "description": "Tag not found"
+            "description": "Tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -224,14 +316,97 @@ const SwaggerSpec = `
             }
           },
           "404": {
-            "description": "Author not found"
+            "description": "Author not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
+    "responses": {
+      "GenericSuccessResponse": {
+        "description": "Successful response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GenericResponse"
+            }
+          },
+          "application/xml": {
+            "schema": {
+              "$ref": "#/components/schemas/GenericResponse"
+            }
+          },
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/markdown": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "application/yaml": {
+            "schema": {
+              "$ref": "#/components/schemas/GenericResponse"
+            }
+          }
+        }
+      },
+      "GenericErrorResponse": {
+        "description": "Error response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "application/xml": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "text/markdown": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "application/yaml": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
     "schemas": {
+      "GenericResponse": {
+        "type": "object",
+        "description": "A generic response object that can represent any successful response"
+      },
       "Quote": {
         "type": "object",
         "properties": {
@@ -260,7 +435,7 @@ const SwaggerSpec = `
               "id": {
                 "type": "integer"
               },
-              "authorId": {
+              "author_id": {
                 "type": "string"
               }
             }
@@ -304,10 +479,10 @@ const SwaggerSpec = `
           "name": {
             "type": "string"
           },
-          "authorId": {
+          "author_id": {
             "type": "string"
           },
-          "totalQuotes": {
+          "total_quotes": {
             "type": "integer"
           }
         }
@@ -332,10 +507,10 @@ const SwaggerSpec = `
           "name": {
             "type": "string"
           },
-          "tagId": {
+          "tag_id": {
             "type": "string"
           },
-          "totalQuotes": {
+          "total_quotes": {
             "type": "integer"
           }
         }
@@ -360,10 +535,10 @@ const SwaggerSpec = `
           "author": {
             "type": "string"
           },
-          "authorId": {
+          "author_id": {
             "type": "string"
           },
-          "totalQuotes": {
+          "total_quotes": {
             "type": "integer"
           },
           "quotes": {
@@ -376,6 +551,21 @@ const SwaggerSpec = `
             "$ref": "#/components/schemas/Pagination"
           }
         }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["status", "message", "error"]
       }
     },
     "parameters": {
@@ -402,10 +592,18 @@ const SwaggerSpec = `
         "in": "query",
         "schema": {
           "type": "string",
-          "enum": ["xml", "html", "json", "text", "markdown", "yaml", "csv", "rss", "atom", "oembed", "oembed.xml", "embed", "embed.js", "svg", "svg-download", "wav"],
+          "enum": ["json", "xml", "html", "text", "markdown", "yaml"],
           "default": "json"
         },
         "description": "Output format of the response"
+      },
+      "AcceptHeader": {
+        "name": "Accept",
+        "in": "header",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Accepted content types"
       }
     }
   }

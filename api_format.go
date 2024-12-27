@@ -58,14 +58,19 @@ func getOutputFormat(r *http.Request) string {
 	// Default to JSON
 	format := "json"
 
-	accept := r.Header.Get("Accept")
+	accept := strings.ToLower(r.Header.Get("Accept"))
 	if accept != "" {
-		if strings.Contains(accept, "text/html") {
+		switch {
+		case strings.Contains(accept, "text/html"):
 			format = "html"
-		} else if strings.Contains(accept, "application/xml") {
+		case strings.Contains(accept, "application/xml"):
 			format = "xml"
-		} else if strings.Contains(accept, "text/plain") {
+		case strings.Contains(accept, "text/plain"):
 			format = "text"
+		case strings.Contains(accept, "text/markdown"):
+			format = "markdown"
+		case strings.Contains(accept, "application/x-yaml"):
+			format = "yaml"
 		}
 	}
 	return format

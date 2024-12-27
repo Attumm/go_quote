@@ -31,10 +31,10 @@ func TestQuotesEndpoint(t *testing.T) {
 		Url          string
 		ExpectedData string
 	}{
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=1&format=json", "./test_data/expected_page_size_1.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=2&format=json", "./test_data/expected_page_size_2.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=3&format=json", "./test_data/expected_page_size_3.json"},
-		{"http://" + createHost(testConfig) + "/quotes/?page_size=10&format=json", "./test_data/expected_page_size_10.json"},
+		{"http://" + createHost(testConfig) + "/quotes?page_size=1&format=json", "./test_data/expected_page_size_1.json"},
+		{"http://" + createHost(testConfig) + "/quotes?page_size=2&format=json", "./test_data/expected_page_size_2.json"},
+		{"http://" + createHost(testConfig) + "/quotes?page_size=3&format=json", "./test_data/expected_page_size_3.json"},
+		{"http://" + createHost(testConfig) + "/quotes?page_size=10&format=json", "./test_data/expected_page_size_10.json"},
 	}
 
 	for _, tc := range testCases {

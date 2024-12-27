@@ -14,15 +14,15 @@ const (
 )
 
 type Quote struct {
-	Text   string
-	Author string
-	Tags   []string
+	Text   string   `json:"text"`
+	Author string   `json:"author"`
+	Tags   []string `json:"tags"`
 }
 
 type ResponseQuote struct {
 	Quote
-	ID       int
-	AuthorID string
+	ID       int    `json:"id"`
+	AuthorID string `json:"author_id"`
 }
 
 func (q Quote) CreateResponseQuote(id int) ResponseQuote {
