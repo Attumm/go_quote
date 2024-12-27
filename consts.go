@@ -592,7 +592,24 @@ const SwaggerSpec = `
         "in": "query",
         "schema": {
           "type": "string",
-          "enum": ["json", "xml", "html", "text", "markdown", "yaml"],
+          "enum": [
+			"atom",
+			"csv",
+			"embed",
+			"embed.js",
+			"html",
+			"json",
+			"markdown",
+			"oembed",
+			"oembed.xml",
+			"rss",
+			"svg",
+			"svg-download",
+			"text",
+			"wav",
+			"xml",
+			"yaml"
+          ],
           "default": "json"
         },
         "description": "Output format of the response"
