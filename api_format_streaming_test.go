@@ -57,7 +57,8 @@ func TestQuotesEndpoint(t *testing.T) {
 
 			var actualJSON, expectedJSON interface{}
 			if err := json.Unmarshal(body, &actualJSON); err != nil {
-				t.Fatalf("Failed to parse actual JSON: %v", err)
+				t.Fatalf("Failed to parse actual JSON: %v\n%v", err, string(body))
+
 			}
 			if err := json.Unmarshal(expected, &expectedJSON); err != nil {
 				t.Fatalf("Failed to parse expected JSON: %v", err)

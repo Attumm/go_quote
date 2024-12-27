@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"html/template"
 	"log"
 	"math/rand"
@@ -181,7 +183,7 @@ func (api *API) TagQuotesHandler(w http.ResponseWriter, r *http.Request) {
 
 	quoteIDs, exists := api.Tags.NameToQuotes[tagName]
 	if !exists {
-		http.Error(w, "Tag not found", http.StatusNotFound)
+		returnError(w, r, http.StatusNotFound, "Tag not found", "Given tag does not exist")
 		return
 	}
 
@@ -260,7 +262,7 @@ func (api *API) AuthorQuotesHandler(w http.ResponseWriter, r *http.Request) {
 
 	quoteIDs, exists := api.Authors.NameToQuotes[authorID]
 	if !exists {
-		http.Error(w, "Author not found", http.StatusNotFound)
+		returnError(w, r, http.StatusNotFound, "Author not found", "Given author does not exist")
 		return
 	}
 
@@ -321,7 +323,7 @@ func createRequestDataList(r *http.Request, api *API, category Category) *Reques
 	case TagsTypeRequest:
 		dataLen = api.Tags.Len()
 	default:
-		log.Fatal("Invalid data type provided")
+		fmt.Println("Invalid data type provided")
 	}
 
 	pagination := api.paginate(dataLen, page, pageSize)
@@ -381,16 +383,16 @@ func (api *API) ListQuotesHandler(w http.ResponseWriter, r *http.Request) {
 func (api *API) QuoteHandler(w http.ResponseWriter, r *http.Request) {
 	requestData := createRequestData(r, api)
 	if len(api.Quotes) == 0 {
-		http.Error(w, "No quotes available", http.StatusNotFound)
+		returnError(w, r, http.StatusNotFound, "No quotes available", "The quote database is empty")
 		return
 	}
 
 	quoteID := rand.Intn(len(api.Quotes))
 	var err error
-	if strings.Contains(r.URL.Path, "quote/") {
+	if strings.Contains(r.URL.Path, "quotes/") {
 		quoteID, err = getID(r.URL.Path)
 		if err != nil || quoteID < 0 || quoteID >= len(api.Quotes) {
-			http.Error(w, "Quote not found", http.StatusNotFound)
+			returnError(w, r, http.StatusNotFound, "Quote not found", fmt.Sprintf("Invalid quote ID"))
 			return
 		}
 	}
@@ -668,4 +670,71 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 
 func (w *responseWriter) WriteHeader(statusCode int) {
 	// No-op
+}
+
+type ErrorResponse struct {
+	Status  int    `json:"status" xml:"status"`
+	Message string `json:"message" xml:"message"`
+	Error   string `json:"error" xml:"error"`
+}
+
+func returnError(w http.ResponseWriter, r *http.Request, status int, message string, err string) {
+	errorResponse := ErrorResponse{
+		Status:  status,
+		Message: message,
+		Error:   err,
+	}
+
+	format := getOutputFormat(r)
+	w.WriteHeader(status)
+	formatErrorResponse(w, errorResponse, format)
+}
+
+func formatErrorResponse(w http.ResponseWriter, errorResponse ErrorResponse, format string) {
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(errorResponse)
+	case "xml":
+		w.Header().Set("Content-Type", "application/xml")
+		w.Write([]byte(xml.Header))
+		xml.NewEncoder(w).Encode(errorResponse)
+	case "html":
+		w.Header().Set("Content-Type", "text/html")
+		htmlTemplate := `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error: {{.Status}}</title>
+        </head>
+        <body>
+            <h1>Error {{.Status}}</h1>
+            <p><strong>Message:</strong> {{.Message}}</p>
+            <p><strong>Error:</strong> {{.Error}}</p>
+        </body>
+        </html>`
+		tmpl, _ := template.New("error").Parse(htmlTemplate)
+		tmpl.Execute(w, errorResponse)
+	case "text":
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "Error %d\nMessage: %s\nError: %s\n", errorResponse.Status, errorResponse.Message, errorResponse.Error)
+	case "yaml":
+		w.Header().Set("Content-Type", "application/x-yaml")
+		yaml.NewEncoder(w).Encode(errorResponse)
+	case "markdown":
+		w.Header().Set("Content-Type", "text/markdown")
+		markdownTemplate := `
+# Error {{.Status}}
+
+**Message:** {{.Message}}
+
+**Error:** {{.Error}}
+`
+		tmpl, _ := template.New("error").Parse(markdownTemplate)
+		tmpl.Execute(w, errorResponse)
+	default:
+		// If an unknown format is requested, default to JSON
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(errorResponse)
+	}
 }
